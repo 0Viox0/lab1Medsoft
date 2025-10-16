@@ -111,7 +111,7 @@ export class HL7Service {
 
       const rcp = new HL7Segment(msg, "RCP");
       rcp.field(1).setValue("I"); // Response priority - Immediate
-      rcp.field(2).setValue("999^RD"); // Quantity limited request - up to 999 records
+      rcp.field(2).setValue("10^RD"); // Quantity limited request - up to 999 records
 
       segments.push(rcp.toHL7String());
 
@@ -130,10 +130,6 @@ export class HL7Service {
 
     const hl7MessageForLogging = segments.join("\n") + "\n";
     const hl7Message = segments.join("\r") + "\r";
-    console.log(
-      `HL7v2 ${payload.action} message to send:\n`,
-      hl7MessageForLogging,
-    );
 
     return hl7Message;
   }
@@ -150,9 +146,67 @@ export class HL7Service {
       httpsAgent: agent,
     });
 
-    // console.log("received result (receptionBackend)", res);
+    console.log("received result (receptionBackend)", res);
 
-    // return res.data;
-    return "hehe";
+    return res.data;
   }
+
+  parseHL7Response(hl7Message: string) {
+    const message = HL7Message.parse(hl7Message);
+    const patients = [];
+    let index = 0;
+
+    while (true) {
+      const pid = message.getSegment("PID", index);
+      if (!pid) break;
+
+      const nameField = pid.field(5).getValue()?.toString() || "";
+      const [lastName, firstName] = nameField.split("^");
+      patients.push({
+        id: pid.field(3).getValue()?.toString() || "",
+        firstName: firstName || "",
+        lastName: lastName || "",
+        birthDate: pid.field(7).getValue()?.toString() || "",
+      });
+
+      index++;
+    }
+
+    console.log(message.getSegment("MSA").toHL7String());
+    console.log("✅ [Reception] Extracted patients:", patients);
+    return patients;
+  }
+
+  buildHL7v2Get(): string {
+    const msg = new HL7Message(HL7Version.v2_5);
+    const msh = new HL7Segment(msg, "MSH");
+    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+    const messageControlId = uuidv4();
+
+    msh.field(1).setValue("|");
+    msh.field(2).setValue("^~\\&");
+    msh.field(3).setValue("Reception");
+    msh.field(4).setValue("FrontDesk");
+    msh.field(5).setValue("HospitalSystem");
+    msh.field(6).setValue("Main");
+    msh.field(7).setValue(timestamp);
+    msh.field(8).setValue("QBP^Q22");
+    msh.field(9).setValue(messageControlId);
+    msh.field(10).setValue("P");
+    msh.field(11).setValue("2.5");
+
+    const qpd = new HL7Segment(msg, "QPD");
+    qpd.field(1).setValue("Q22^Get Patients^HL7");
+    qpd.field(2).setValue(messageControlId);
+    qpd.field(3).setValue("");
+
+    const rcp = new HL7Segment(msg, "RCP");
+    rcp.field(1).setValue("I");
+    rcp.field(2).setValue("10^RD");
+
+    const hl7Message = [msh.toHL7String(), qpd.toHL7String(), rcp.toHL7String()].join("\r") + "\r";
+    console.log("📤 [Reception] Sending HL7 GET:\n", hl7Message.replace(/\r/g, "\n"));
+    return hl7Message;
+  }
+
 }

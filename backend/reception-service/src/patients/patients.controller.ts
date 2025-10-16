@@ -20,6 +20,7 @@ export class PatientsController {
   @Get()
   async getPatients() {
     const msg = this.hl7.buildHL7v2({ action: "GET" });
-    return this.hl7.sendHL7(msg);
+    const resp = this.hl7.sendHL7(msg)
+    return this.hl7.parseHL7Response(await resp);
   }
 }
