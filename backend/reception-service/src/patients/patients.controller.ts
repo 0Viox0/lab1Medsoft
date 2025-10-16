@@ -1,42 +1,25 @@
 import { Controller, Post, Body, Delete, Get } from "@nestjs/common";
 import { HL7Service } from "./hl7.service";
-import axios from "axios";
 
 @Controller("patients")
 export class PatientsController {
-  private hospitalUrl: string;
-
-  constructor(private readonly hl7: HL7Service) {
-    this.hospitalUrl = "https://localhost:3001/patients";
-  }
+  constructor(private readonly hl7: HL7Service) {}
 
   @Post()
-  async create(
-    @Body() body: { firstName: string; lastName: string; birthDate: string },
-  ) {
-    const hl7 = this.hl7.buildHL7v2({ ...body, action: "CREATE" });
-    const res = await this.hl7.sendHL7(hl7);
-
-    console.log("result in post: ", res);
-
-    return res;
+  async create(@Body() body: { firstName: string; lastName: string; birthDate: string }) {
+    const msg = this.hl7.buildHL7v2({ ...body, action: "CREATE" });
+    return this.hl7.sendHL7(msg);
   }
 
   @Delete()
   async remove(@Body() body: { id: string }) {
-    const hl7 = this.hl7.buildHL7v2({ id: body.id, action: "DELETE" });
-    const res = await this.hl7.sendHL7(hl7);
-
-    console.log("result in delete: ", res);
-
-    return res;
+    const msg = this.hl7.buildHL7v2({ id: body.id, action: "DELETE" });
+    return this.hl7.sendHL7(msg);
   }
 
   @Get()
   async getPatients() {
-    const hl7 = this.hl7.buildHL7v2({ action: "GET" });
-    const res = await this.hl7.sendHL7(hl7);
-
-    return res;
+    const msg = this.hl7.buildHL7v2({ action: "GET" });
+    return this.hl7.sendHL7(msg);
   }
 }

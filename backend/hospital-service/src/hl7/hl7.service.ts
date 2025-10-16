@@ -2,117 +2,137 @@ import { Injectable } from "@nestjs/common";
 import { PatientsService } from "../patients/patients.service";
 import path from "path";
 import dotenv from "dotenv";
+import {
+  HL7Message,
+  HL7Segment,
+  HL7Version,
+} from "hl7v2";
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class HL7Service {
+
   constructor(private readonly patients: PatientsService) {
     const envPath = path.resolve(process.cwd(), ".env");
     dotenv.config({ path: envPath });
   }
 
-  parseHL7Text(message: string) {
-    if (!message || typeof message !== "string") return {};
-
-    const lines = message
-      .split(/\r?\n|\r/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const result: Record<string, any> = {};
-
-    for (const line of lines) {
-      const fields = line.split("|");
-      const seg = fields[0];
-
-      if (!seg) continue;
-
-      const segObj = { raw: line, fields };
-
-      if (seg === "MSH") {
-        result.MSH = {
-          ...segObj,
-          fieldSeparator: line[3] || "|",
-          encodingChars: fields[1] || "",
-          sendingApp: fields[2] || "",
-          sendingFacility: fields[3] || "",
-          receivingApp: fields[4] || "",
-          receivingFacility: fields[5] || "",
-          timestamp: fields[6] || "",
-          messageType: fields[8] || "",
-          messageControlId: fields[9] || "",
-          version: fields[11] || "",
-        };
-      } else if (seg === "PID") {
-        const id = fields[3] || "";
-        const nameField = fields[5] || "";
-        let lastName = "",
-          firstName = "";
-
-        if (nameField.includes("^")) {
-          const [family, given] = nameField.split("^");
-          lastName = family || "";
-          firstName = given || "";
-        } else {
-          lastName = nameField;
-          firstName = fields[6] || "";
-        }
-
-        const action = (fields[fields.length - 1] || "CREATE").toUpperCase();
-
-        result.PID = {
-          ...segObj,
-          id,
-          lastName,
-          firstName,
-          birthDate: fields[7] || "",
-          action,
-        };
-      } else {
-        if (!result[seg]) result[seg] = [];
-        result[seg].push(segObj);
-      }
+  parseHL7Text(message: string): HL7Message {
+    try {
+      const parsed = HL7Message.parse(message);
+      return parsed;
+    } catch (err) {
+      console.error("Ошибка при парсинге HL7:", err);
+      throw new Error("Invalid HL7 message");
     }
-
-    return result;
   }
 
-  async processHL7(hl7objOrText: any) {
-    let parsed = hl7objOrText;
-    if (typeof hl7objOrText === "string") {
-      parsed = this.parseHL7Text(hl7objOrText);
-    }
-
-    const pid = parsed?.PID;
-    const action = pid?.action;
-
+  async processHL7(parsed: HL7Message) {
+    const msh = parsed.getSegment("MSH");
+    const pid = parsed.getSegment("PID");
+    console.log("pid");
     if (!pid) {
+      console.log("!!!!!!!!!!2333333")
       return { ok: false, reason: "PID segment not found" };
     }
 
-    if (action === "CREATE") {
-      const toCreate = {
-        id: pid.id,
-        firstName: pid.firstName,
-        lastName: pid.lastName,
-        birthDate: pid.birthDate,
-        raw: pid.raw,
-        fields: pid.fields,
-      };
+    // Получаем данные из PID сегмента
+    const id = pid.field(3).component(1).toString(); // Patient ID
+    const lastName = pid.field(5).component(1).toString(); // Last Name
+    const firstName = pid.field(5).component(2).toString(); // First Name
+    const birthDate = pid.field(7).component(1).toString(); // Date of Birth
+    console.log("HL7", msh, lastName, firstName, birthDate);
 
-      const p = await this.patients.createFromHL7(toCreate);
+    // Получаем действие из последнего поля PID или из MSH-9
+    const actionField = pid.field(pid.fields.length);
+    const action = actionField ? actionField.component(1).toString().toUpperCase() : "CREATE";
 
-      return { ok: true, id: p.id };
-    } else if (action === "DELETE") {
-      const id = pid.id;
+    // Альтернативно можно получить тип сообщения из MSH
+    const messageType = msh?.field(9).component(1).toString();
+    const triggerEvent = msh?.field(9).component(2).toString();
 
-      if (!id) return { ok: false, reason: "no id for DELETE" };
+    console.log(`Processing HL7 message: ${messageType}^${triggerEvent}, Action: ${action}`);
 
+    if (action === "CREATE" || messageType === "ADT" && triggerEvent === "A01") {
+      const patient = await this.patients.createFromHL7({
+        id,
+        firstName,
+        lastName,
+        birthDate,
+        raw: parsed.toHL7String(),
+      });
+      return { ok: true, id: patient.id, action: "CREATE" };
+    } else if (action === "DELETE" || messageType === "ADT" && triggerEvent === "A03") {
       const ok = await this.patients.deleteById(id);
-
-      return { ok };
-    } else if (action === "GET") {
-      return this.patients.last10();
+      return { ok, action: "DELETE" };
+    } else if (action === "GET" || messageType === "QRY") {
+      const patients = await this.patients.last10();
+      return { ok: true, data: patients, action: "GET" };
     }
 
-    return { ok: false, reason: "unknown action" };
+    return { ok: false, reason: "Unknown action or message type" };
+  }
+
+  // Метод для построения HL7 ответного сообщения
+  buildHL7Response(originalMessage: HL7Message, responseData: any): string {
+    const responseMsg = new HL7Message(HL7Version.v2_5);
+
+    // MSH сегмент для ответа
+    const msh = new HL7Segment(responseMsg, "MSH");
+    const timestamp = new Date()
+        .toISOString()
+        .replace(/[-:T.Z]/g, "")
+        .slice(0, 14);
+
+    // Получаем данные из оригинального сообщения для ответа
+    const originalMSH = originalMessage.getSegment("MSH");
+    const originalMessageControlId = originalMSH?.field(10).toString();
+
+    msh.field(1).setValue("|");
+    msh.field(2).setValue("^~\\&");
+    msh.field(3).setValue("HospitalSystem");
+    msh.field(4).setValue("Main");
+    msh.field(5).setValue(originalMSH?.field(3).toString() || "Reception");
+    msh.field(6).setValue(originalMSH?.field(4).toString() || "FrontDesk");
+    msh.field(7).setValue(timestamp);
+    msh.field(9).setValue("ACK");
+    msh.field(10).setValue(uuidv4());
+    msh.field(11).setValue("P");
+    msh.field(12).setValue(HL7Version.v2_5);
+
+    // MSA сегмент - подтверждение сообщения
+    const msa = new HL7Segment(responseMsg, "MSA");
+    msa.field(1).setValue(responseData.ok ? "AA" : "AE");
+    msa.field(2).setValue(originalMessageControlId || "");
+    if (!responseData.ok) {
+      msa.field(3).setValue(responseData.reason || "Error processing message");
+    }
+
+    // Если это ответ на GET запрос, добавляем данные пациентов
+    if (responseData.action === "GET" && responseData.data) {
+      responseData.data.forEach((patient: any) => {
+        const pid = new HL7Segment(responseMsg, "PID");
+        pid.field(3).setValue(patient.id);
+        pid.field(5).setValue(`${patient.lastName || ""}^${patient.firstName || ""}`);
+        pid.field(7).setValue(patient.birthDate || "");
+      });
+    }
+
+    return responseMsg.toHL7String();
+  }
+
+  // Вспомогательный метод для извлечения данных из сообщения
+  extractPatientData(parsed: HL7Message) {
+    const pid = parsed.getSegment("PID");
+    if (!pid) return null;
+
+    return {
+      id: pid.field(3).component(1).toString(),
+      lastName: pid.field(5).component(1).toString(),
+      firstName: pid.field(5).component(2).toString(),
+      birthDate: pid.field(7).component(1).toString(),
+      messageType: parsed.getSegment("MSH")?.field(9).component(1).toString(),
+      triggerEvent: parsed.getSegment("MSH")?.field(9).component(2).toString(),
+    };
   }
 }
