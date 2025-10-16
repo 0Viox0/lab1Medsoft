@@ -2,16 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { PatientsService } from "../patients/patients.service";
 import path from "path";
 import dotenv from "dotenv";
-import {
-  HL7Message,
-  HL7Segment,
-  HL7Version,
-} from "hl7v2";
+import { HL7Message, HL7Segment, HL7Version } from "hl7v2";
 import { v4 as uuidv4 } from "uuid";
+import { console } from "inspector";
 
 @Injectable()
 export class HL7Service {
-
   constructor(private readonly patients: PatientsService) {
     const envPath = path.resolve(process.cwd(), ".env");
     dotenv.config({ path: envPath });
@@ -32,28 +28,42 @@ export class HL7Service {
     const pid = parsed.getSegment("PID");
     console.log("pid");
     if (!pid) {
-      console.log("!!!!!!!!!!2333333")
       return { ok: false, reason: "PID segment not found" };
     }
 
     // Получаем данные из PID сегмента
-    const id = pid.field(3).component(1).toString(); // Patient ID
-    const lastName = pid.field(5).component(1).toString(); // Last Name
-    const firstName = pid.field(5).component(2).toString(); // First Name
-    const birthDate = pid.field(7).component(1).toString(); // Date of Birth
-    console.log("HL7", msh, lastName, firstName, birthDate);
+    // const id = pid.field(3).component(1).toString(); // Patient ID
+    // const lastName = pid.field(5).component(1).toString(); // Last Name
+    // const firstName = pid.field(5).component(2).toString(); // First Name
+    // const birthDate = pid.field(7).component(1).toString(); // Date of Birth
+    //
+    const id = pid.field(3).getValue().toString(); // Patient ID
+    const [firstName, lastName] = pid.field(5).getValue().toString().split("^"); // Last Name
+    const birthDate = this.hl7ToDate(
+      pid.field(7).getValue().toString(),
+    ).toString();
+    console.log("~~~~~~~~~~~~~~~~~~~HL7", id, lastName, firstName, birthDate);
 
     // Получаем действие из последнего поля PID или из MSH-9
     const actionField = pid.field(pid.fields.length);
-    const action = actionField ? actionField.component(1).toString().toUpperCase() : "CREATE";
+    const action = actionField.getValue();
+    console.log("~~~~~~~~~~~~~~~~~~~the action: ", action);
+    // const action = actionField
+    //   ? actionField.component(1).toString().toUpperCase()
+    //   : "CREATE";
 
     // Альтернативно можно получить тип сообщения из MSH
     const messageType = msh?.field(9).component(1).toString();
     const triggerEvent = msh?.field(9).component(2).toString();
 
-    console.log(`Processing HL7 message: ${messageType}^${triggerEvent}, Action: ${action}`);
+    console.log(
+      `Processing HL7 message: ${messageType}^${triggerEvent}, Action: ${action}`,
+    );
 
-    if (action === "CREATE" || messageType === "ADT" && triggerEvent === "A01") {
+    if (
+      action === "CREATE" ||
+      (messageType === "ADT" && triggerEvent === "A01")
+    ) {
       const patient = await this.patients.createFromHL7({
         id,
         firstName,
@@ -62,7 +72,10 @@ export class HL7Service {
         raw: parsed.toHL7String(),
       });
       return { ok: true, id: patient.id, action: "CREATE" };
-    } else if (action === "DELETE" || messageType === "ADT" && triggerEvent === "A03") {
+    } else if (
+      action === "DELETE" ||
+      (messageType === "ADT" && triggerEvent === "A03")
+    ) {
       const ok = await this.patients.deleteById(id);
       return { ok, action: "DELETE" };
     } else if (action === "GET" || messageType === "QRY") {
@@ -80,9 +93,9 @@ export class HL7Service {
     // MSH сегмент для ответа
     const msh = new HL7Segment(responseMsg, "MSH");
     const timestamp = new Date()
-        .toISOString()
-        .replace(/[-:T.Z]/g, "")
-        .slice(0, 14);
+      .toISOString()
+      .replace(/[-:T.Z]/g, "")
+      .slice(0, 14);
 
     // Получаем данные из оригинального сообщения для ответа
     const originalMSH = originalMessage.getSegment("MSH");
@@ -113,12 +126,37 @@ export class HL7Service {
       responseData.data.forEach((patient: any) => {
         const pid = new HL7Segment(responseMsg, "PID");
         pid.field(3).setValue(patient.id);
-        pid.field(5).setValue(`${patient.lastName || ""}^${patient.firstName || ""}`);
+        pid
+          .field(5)
+          .setValue(`${patient.lastName || ""}^${patient.firstName || ""}`);
         pid.field(7).setValue(patient.birthDate || "");
       });
     }
 
     return responseMsg.toHL7String();
+  }
+
+  hl7ToDate(hl7Timestamp: string) {
+    // Remove the milliseconds part if present
+    const timestamp = hl7Timestamp.split(".")[0];
+
+    // Extract components
+    const year = timestamp.substring(0, 4);
+    const month = timestamp.substring(4, 6);
+    const day = timestamp.substring(6, 8);
+    const hour = timestamp.substring(8, 10);
+    const minute = timestamp.substring(10, 12);
+    const second = timestamp.substring(12, 14);
+
+    // Create Date object (month is 0-indexed in JavaScript)
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Month is 0-11
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second),
+    );
   }
 
   // Вспомогательный метод для извлечения данных из сообщения
@@ -136,3 +174,4 @@ export class HL7Service {
     };
   }
 }
+

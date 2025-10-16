@@ -9,14 +9,27 @@ export class HL7Controller {
   async receive(@Req() req: any, @Body() body: any) {
     let hl7Text: string | null = null;
 
-    if (typeof body === "string") hl7Text = body;
-    else if (req?.rawBody) hl7Text = req.rawBody.toString();
-    else if (body?.payload) hl7Text = body.payload;
+    console.log("received request (changed): ", req.body.split("\r"));
 
-    if (!hl7Text) {
-      return { ok: false, reason: "no HL7 text found" };
+    const array = req.body.split("\r");
+
+    let message: string = "";
+    for (const item of array) {
+      message += `${item}\n`;
     }
 
+    hl7Text = message.replace(/\n|\r\n/g, "\r");
+
+    // return;
+    //
+    // if (typeof body === "string") hl7Text = body.replace(/\n|\r\n/g, "\r");
+    // else if (req?.rawBody) hl7Text = req.rawBody.toString();
+    // else if (body?.payload) hl7Text = body.payload;
+    //
+    // if (!hl7Text) {
+    //   return { ok: false, reason: "no HL7 text found" };
+    // }
+    //
     console.log("Incoming HL7:\n", hl7Text);
 
     try {
