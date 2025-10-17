@@ -80,7 +80,7 @@ export class HL7Service {
     const action = actionField?.getValue()?.toUpperCase() || "";
 
     if (
-      action === "CREATE" ||
+      //action === "CREATE" ||
       (messageType === "ADT" && triggerEvent === "A01")
     ) {
       await this.patients.createFromHL7({
@@ -95,7 +95,7 @@ export class HL7Service {
     }
 
     if (
-      action === "DELETE" ||
+      //action === "DELETE" ||
       (messageType === "ADT" && triggerEvent === "A03")
     ) {
       await this.patients.deleteById(id);
@@ -138,7 +138,12 @@ export class HL7Service {
     const segments = [msh.toHL7String(), msa.toHL7String()];
     patients = await this.patients.last10();
 
-    if (patients.length > 0) {
+    const orignialmsh = originalMessage.getSegment("MSH");
+
+    const messageType = orignialmsh?.field(8)?.getValue()?.toString().split("^")[0];
+    const triggerEvent = orignialmsh?.field(8)?.getValue()?.toString().split("^")[1];
+
+    if (messageType === "QBP" && triggerEvent === "Q22") {
       patients = await this.patients.last10();
       patients.forEach((patient, index) => {
         const pid = new HL7Segment(response, "PID");
@@ -186,7 +191,7 @@ export class HL7Service {
         ? parseInt(cleanDate.substring(0, 4))
         : new Date().getFullYear();
     const month =
-      cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0; // Month is 0-indexed
+      cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0;
     const day = cleanDate.length >= 8 ? parseInt(cleanDate.substring(6, 8)) : 1;
 
     const hour =

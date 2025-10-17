@@ -96,7 +96,6 @@ export class HL7Service {
 
       segments.push(pid.toHL7String());
 
-      // PV1 segment is typically required for ADT^A03
       const pv1 = new HL7Segment(msg, "PV1");
       pv1.field(1).setValue("1");
       pv1.field(2).setValue("D");
@@ -174,7 +173,7 @@ export class HL7Service {
 
   hl7ToDate(hl7Date: string): Date {
     if (!hl7Date || hl7Date.trim() === "") {
-      return new Date(); // Return current date if input is empty
+      return new Date();
     }
 
     const cleanDate = hl7Date.replace(/[^\d]/g, "");
@@ -184,7 +183,7 @@ export class HL7Service {
         ? parseInt(cleanDate.substring(0, 4))
         : new Date().getFullYear();
     const month =
-      cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0; // Month is 0-indexed
+      cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0;
     const day = cleanDate.length >= 8 ? parseInt(cleanDate.substring(6, 8)) : 1;
 
     const hour =
