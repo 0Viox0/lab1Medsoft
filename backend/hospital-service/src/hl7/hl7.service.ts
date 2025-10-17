@@ -7,25 +7,26 @@ import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class HL7Service {
-  private cachedPatients: any[] = [];
+  // private cachedPatients: any[] = [];
   constructor(private readonly patients: PatientsService) {
     const envPath = path.resolve(process.cwd(), ".env");
     dotenv.config({ path: envPath });
-    this.refreshCache();
-    setInterval(() => this.refreshCache(), 5000);
+    // this.refreshCache();
+    // setInterval(() => this.refreshCache(), 5000);
   }
 
-  private async refreshCache() {
-    try {
-      this.cachedPatients = await this.patients.last10();
-      console.log("[Hospital] Cache updated:", this.cachedPatients.length);
-    } catch (err) {
-      console.error("[Hospital] Cannot update cache:", err);
-    }
-  }
+  // private async refreshCache() {
+  //   try {
+  //     this.cachedPatients = await this.patients.last10();
+  //     console.log("[Hospital] Cache updated:", this.cachedPatients.length);
+  //   } catch (err) {
+  //     console.error("[Hospital] Cannot update cache:", err);
+  //   }
+  // }
 
-  private getCachedPatients() {
-    return this.cachedPatients;
+  private async getCachedPatients() {
+    // return this.cachedPatients;
+    return await this.patients.last10();
   }
 
   parseHL7Text(message: string): HL7Message {
@@ -48,7 +49,8 @@ export class HL7Service {
     console.log(`HL7 Type: ${messageType}, Event: ${triggerEvent}`);
 
     if (messageType === "QBP" && triggerEvent === "Q22") {
-      const patients = this.getCachedPatients();
+      // const patients = this.getCachedPatients();
+      const patients = await this.patients.last10();
 
       if (!patients || patients.length === 0) {
         console.warn("[Hospital] No patients found, sending dummy.");
@@ -58,21 +60,21 @@ export class HL7Service {
           lastName: "Doe",
           birthDate: "19800101",
         };
-        return this.buildHL7Response(parsed, [dummy]);
+        return await this.buildHL7Response(parsed, [dummy]);
       }
 
-      return this.buildHL7Response(parsed, patients);
+      return await this.buildHL7Response(parsed, patients);
     }
 
     if (!pid) {
       console.log("NO PID Segment in message");
-      return this.buildHL7Response(parsed, []);
+      return await this.buildHL7Response(parsed, []);
     }
 
     const id = pid.field(3).getValue().toString();
     if (messageType === "ADT" && triggerEvent === "A03") {
       await this.patients.deleteById(id);
-      return this.buildHL7Response(parsed, []);
+      return await this.buildHL7Response(parsed, []);
     }
     const [lastName, firstName] = pid
       .field(5)
@@ -97,7 +99,7 @@ export class HL7Service {
         birthDate,
         raw: parsed.toHL7String(),
       });
-      return this.buildHL7Response(parsed, []);
+      return await this.buildHL7Response(parsed, []);
     }
 
     // --- DELETE ---
@@ -107,14 +109,14 @@ export class HL7Service {
     ) {
       console.log("[Hospital] Deleting Patient...");
       await this.patients.deleteById(id);
-      return this.buildHL7Response(parsed, []);
+      return await this.buildHL7Response(parsed, []);
     }
 
     console.log("[Hospital] Unresolved action");
-    return this.buildHL7Response(parsed, []);
+    return await this.buildHL7Response(parsed, []);
   }
 
-  buildHL7Response(originalMessage: HL7Message, patients: any[] = []): string {
+  async buildHL7Response(originalMessage: HL7Message, patients: any[] = []) {
     const response = new HL7Message(HL7Version.v2_5);
     const msh = new HL7Segment(response, "MSH");
     const timestamp = new Date()
@@ -142,10 +144,12 @@ export class HL7Service {
     msa.field(2).setValue(originalMSH?.field(10).toString() || "");
 
     const segments = [msh.toHL7String(), msa.toHL7String()];
-    patients = this.cachedPatients;
+    // patients = this.cachedPatients;
+    patients = await this.patients.last10();
     // PID
     if (patients.length > 0) {
-      patients = this.cachedPatients;
+      // patients = this.cachedPatients;
+      patients = await this.patients.last10();
       patients.forEach((patient, index) => {
         const pid = new HL7Segment(response, "PID");
         pid.field(1).setValue((index + 1).toString());

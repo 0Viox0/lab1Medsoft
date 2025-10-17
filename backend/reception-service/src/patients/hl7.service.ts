@@ -163,7 +163,7 @@ export class HL7Service {
         id: pid.field(3).getValue()?.toString() || "",
         firstName: firstName || "",
         lastName: lastName || "",
-        birthDate: pid.field(7).getValue()?.toString() || "",
+        birthDate: this.hl7ToDate(pid.field(7).getValue()?.toString()),
       });
 
       index++;
@@ -172,5 +172,34 @@ export class HL7Service {
     console.log(message.toHL7String());
     console.log("[Reception] Extracted patients:", patients);
     return patients;
+  }
+
+  hl7ToDate(hl7Date: string): Date {
+    if (!hl7Date || hl7Date.trim() === "") {
+      return new Date(); // Return current date if input is empty
+    }
+
+    // Remove any non-digit characters and take only the date/time parts
+    const cleanDate = hl7Date.replace(/[^\d]/g, "");
+
+    // Extract components with safe defaults
+    const year =
+      cleanDate.length >= 4
+        ? parseInt(cleanDate.substring(0, 4))
+        : new Date().getFullYear();
+    const month =
+      cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0; // Month is 0-indexed
+    const day = cleanDate.length >= 8 ? parseInt(cleanDate.substring(6, 8)) : 1;
+
+    // Time components (optional in HL7)
+    const hour =
+      cleanDate.length >= 10 ? parseInt(cleanDate.substring(8, 10)) : 0;
+    const minute =
+      cleanDate.length >= 12 ? parseInt(cleanDate.substring(10, 12)) : 0;
+    const second =
+      cleanDate.length >= 14 ? parseInt(cleanDate.substring(12, 14)) : 0;
+
+    // Create and return the Date object
+    return new Date(year, month, day, hour, minute, second);
   }
 }
