@@ -31,7 +31,6 @@ export class HL7Service {
       .slice(0, 14);
     const messageControlId = uuidv4();
 
-    // Determine message type based on action
     let msgType: string;
     switch (payload.action) {
       case "CREATE":
@@ -75,15 +74,15 @@ export class HL7Service {
     } else if (payload.action === "DELETE") {
       // For DELETE (ADT^A03 - Discharge), we need PID and EVN segments
       const evn = new HL7Segment(msg, "EVN");
-      evn.field(1).setValue("A03"); // Event type code
-      evn.field(2).setValue(timestamp); // Recorded date/time
-      evn.field(4).setValue("D"); // Event reason code (Discharge)
+      evn.field(1).setValue("A03");
+      evn.field(2).setValue(timestamp);
+      evn.field(4).setValue("D");
 
       segments.push(evn.toHL7String());
 
       const pid = new HL7Segment(msg, "PID");
       if (payload.id) {
-        pid.field(3).setValue(payload.id); // Patient ID to delete
+        pid.field(3).setValue(payload.id);
       }
       if (payload.lastName || payload.firstName) {
         pid
@@ -95,23 +94,22 @@ export class HL7Service {
 
       // PV1 segment is typically required for ADT^A03
       const pv1 = new HL7Segment(msg, "PV1");
-      pv1.field(1).setValue("1"); // Set ID
-      pv1.field(2).setValue("D"); // Patient class - Discharged
-      pv1.field(3).setValue(""); // Assigned patient location (empty for discharge)
+      pv1.field(1).setValue("1");
+      pv1.field(2).setValue("D");
+      pv1.field(3).setValue("");
 
       segments.push(pv1.toHL7String());
     } else if (payload.action === "GET") {
-      // For GET (QBP^Q22 - Patient Query), we need QPD and RCP segments
       const qpd = new HL7Segment(msg, "QPD");
-      qpd.field(1).setValue("Q22^Get Patients^HL7"); // Query name
-      qpd.field(2).setValue(messageControlId); // Query tag
-      qpd.field(3).setValue(""); // Parameters (empty for all patients)
+      qpd.field(1).setValue("Q22^Get Patients^HL7");
+      qpd.field(2).setValue(messageControlId);
+      qpd.field(3).setValue("");
 
       segments.push(qpd.toHL7String());
 
       const rcp = new HL7Segment(msg, "RCP");
-      rcp.field(1).setValue("I"); // Response priority - Immediate
-      rcp.field(2).setValue("10^RD"); // Quantity limited request - up to 999 records
+      rcp.field(1).setValue("I");
+      rcp.field(2).setValue("10^RD"); // Quantity limit, why not?)
 
       segments.push(rcp.toHL7String());
 
@@ -140,7 +138,6 @@ export class HL7Service {
       rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
     });
 
-    // console.log("~~~~~~~sldkfjlskdflskdjflskdj hre it is", hl7Message);
     const res = await axios.post(this.hospitalUrl, hl7Message, {
       headers: { "Content-Type": "text/plain" },
       httpsAgent: agent,
@@ -172,41 +169,9 @@ export class HL7Service {
       index++;
     }
 
-    console.log(message.getSegment("MSA").toHL7String());
-    console.log("✅ [Reception] Extracted patients:", patients);
+    console.log(message.toHL7String());
+    console.log("[Reception] Extracted patients:", patients);
     return patients;
-  }
-
-  buildHL7v2Get(): string {
-    const msg = new HL7Message(HL7Version.v2_5);
-    const msh = new HL7Segment(msg, "MSH");
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-    const messageControlId = uuidv4();
-
-    msh.field(1).setValue("|");
-    msh.field(2).setValue("^~\\&");
-    msh.field(3).setValue("Reception");
-    msh.field(4).setValue("FrontDesk");
-    msh.field(5).setValue("HospitalSystem");
-    msh.field(6).setValue("Main");
-    msh.field(7).setValue(timestamp);
-    msh.field(8).setValue("QBP^Q22");
-    msh.field(9).setValue(messageControlId);
-    msh.field(10).setValue("P");
-    msh.field(11).setValue("2.5");
-
-    const qpd = new HL7Segment(msg, "QPD");
-    qpd.field(1).setValue("Q22^Get Patients^HL7");
-    qpd.field(2).setValue(messageControlId);
-    qpd.field(3).setValue("");
-
-    const rcp = new HL7Segment(msg, "RCP");
-    rcp.field(1).setValue("I");
-    rcp.field(2).setValue("10^RD");
-
-    const hl7Message = [msh.toHL7String(), qpd.toHL7String(), rcp.toHL7String()].join("\r") + "\r";
-    console.log("📤 [Reception] Sending HL7 GET:\n", hl7Message.replace(/\r/g, "\n"));
-    return hl7Message;
   }
 
 }

@@ -10,7 +10,6 @@ export class HL7Controller {
   async receive(@Req() req: any, @Body() body: any) {
     let hl7Text: string | null = null;
 
-    // Сохраняем оригинальный HL7 текст из rawBody или body
     if (typeof body === "string") {
       hl7Text = body;
     } else if (req?.rawBody) {
@@ -24,13 +23,13 @@ export class HL7Controller {
       return {ok: false, reason: "no HL7 text found"};
     }
 
-    console.log("✅ Incoming HL7:\n", hl7Text);
+    console.log("Incoming HL7:\n", hl7Text);
 
     try {
       const parsed = this.hl7Service.parseHL7Text(hl7Text);
       const result = this.hl7Service.processHL7(parsed);
 
-      console.log("✅ Outgoing HL7:\n", result);
+      console.log("Outgoing HL7:\n", result);
 
       return result;
     } catch (err) {

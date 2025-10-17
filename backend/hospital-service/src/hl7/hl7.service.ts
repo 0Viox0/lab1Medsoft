@@ -18,9 +18,9 @@ export class HL7Service {
   private async refreshCache() {
     try {
       this.cachedPatients = await this.patients.last10();
-      console.log("♻️ [Hospital] Кеш пациентов обновлён:", this.cachedPatients.length);
+      console.log("[Hospital] Cache updated:", this.cachedPatients.length);
     } catch (err) {
-      console.error("❌ Не удалось обновить кеш пациентов:", err);
+      console.error("[Hospital] Cannot update cache:", err);
     }
   }
 
@@ -28,38 +28,31 @@ export class HL7Service {
     return this.cachedPatients;
   }
 
-  // 📥 Парсинг входящего HL7
   parseHL7Text(message: string): HL7Message {
     try {
-      console.log("📩 [Hospital] Получено HL7 сообщение:\n", message.replace(/\r/g, "\n"));
+      console.log("[Hospital] Received HL7:\n", message.replace(/\r/g, "\n"));
       const parsed = HL7Message.parse(message);
       return parsed;
     } catch (err) {
-      console.error("❌ Ошибка при парсинге HL7:", err);
+      console.error("Cannot parse HL7:", err);
       throw new Error("Invalid HL7 message");
     }
   }
 
-  // 🔄 Основной обработчик
   async processHL7(parsed: HL7Message) {
     const msh = parsed.getSegment("MSH");
     const pid = parsed.getSegment("PID");
-    console.log("📋 [Hospital] Начало обработки HL7 сообщения...");
 
     const messageType = msh?.field(8)?.getValue()?.toString().split("^")[0];
     const triggerEvent = msh?.field(8)?.getValue()?.toString().split("^")[1];
-    console.log(`➡️ Тип: ${messageType}, Событие: ${triggerEvent}`);
+    console.log(`HL7 Type: ${messageType}, Event: ${triggerEvent}`);
 
-    // --- Обработка QBP^Q22 (GET-запрос на пациентов) ---
     if (messageType === "QBP" && triggerEvent === "Q22") {
-      console.log("🟦 [Hospital] Запрошен список последних 10 пациентов...");
 
       const patients = this.getCachedPatients();
-      console.log("✅ [Hospital] Пациенты получены:", patients);
 
-      // Если пусто — логим и создаём заглушку
       if (!patients || patients.length === 0) {
-        console.warn("⚠️ [Hospital] Список пациентов пуст, добавляем фиктивного пациента для отладки.");
+        console.warn("[Hospital] No patients found, sending dummy.");
         const dummy = {
           id: "TEST123",
           firstName: "John",
@@ -72,13 +65,11 @@ export class HL7Service {
       return this.buildHL7Response(parsed, patients);
     }
 
-    // --- Если PID отсутствует, просто ACK ---
     if (!pid) {
-      console.log("⚠️ PID сегмент отсутствует, возвращаем простой ACK");
+      console.log("NO PID Segment in message");
       return this.buildHL7Response(parsed, []);
     }
 
-    // --- Парсим пациента ---
     const id = pid.field(3).getValue().toString();
     if (messageType === "ADT" && triggerEvent === "A03"){
       await this.patients.deleteById(id);
@@ -87,40 +78,33 @@ export class HL7Service {
     const [lastName, firstName] = pid.field(5)?.getValue()?.toString().split("^");
     const birthDate = pid.field(7)?.getValue()?.toString() || "";
 
-
-    // --- Получаем действие ---
     const actionField = pid.field(pid.fields.length);
     const action = actionField?.getValue()?.toUpperCase() || "";
 
-    console.log(`🧩 Пациент: ID=${id}, ${lastName} ${firstName}, DOB=${birthDate}, Action=${action}`);
-
-    // --- CREATE ---
     if (action === "CREATE" || (messageType === "ADT" && triggerEvent === "A01")) {
-      console.log("🟢 [Hospital] Создание пациента...");
+      console.log("[Hospital] Creating patient...");
       await this.patients.createFromHL7({ id, firstName, lastName, birthDate, raw: parsed.toHL7String() });
       return this.buildHL7Response(parsed, []);
     }
 
     // --- DELETE ---
     if (action === "DELETE" || (messageType === "ADT" && triggerEvent === "A03")) {
-      console.log("🔴 [Hospital] Удаление пациента...");
+      console.log("[Hospital] Deleting Patient...");
       await this.patients.deleteById(id);
       return this.buildHL7Response(parsed, []);
     }
 
-    console.log("⚪ [Hospital] Неизвестное действие, возвращаем ACK");
+    console.log("[Hospital] Unresolved action");
     return this.buildHL7Response(parsed, []);
   }
 
-  // 🏗️ Формирование HL7-ответа
   buildHL7Response(originalMessage: HL7Message, patients: any[] = []): string {
-    console.log("🏗️ [Hospital] Начало сборки HL7-ответа...");
     const response = new HL7Message(HL7Version.v2_5);
     const msh = new HL7Segment(response, "MSH");
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
     const originalMSH = originalMessage.getSegment("MSH");
 
-    // --- MSH ---
+    // MSH
     msh.field(1).setValue("|");
     msh.field(2).setValue("^~\\&");
     msh.field(3).setValue("HospitalSystem");
@@ -133,16 +117,15 @@ export class HL7Service {
     msh.field(11).setValue("P");
     msh.field(12).setValue("2.5");
 
-    // --- MSA ---
+    // MSA
     const msa = new HL7Segment(response, "MSA");
     msa.field(1).setValue("AA");
     msa.field(2).setValue(originalMSH?.field(10).toString() || "");
 
     const segments = [msh.toHL7String(), msa.toHL7String()];
     patients = this.cachedPatients
-    // --- PID ---
+    // PID
     if (patients.length > 0) {
-      console.log(`🧾 [Hospital] Добавляем ${patients.length} пациентов в HL7-ответ...`);
       patients = this.cachedPatients
       patients.forEach((patient, index) => {
         const pid = new HL7Segment(response, "PID");
@@ -153,12 +136,11 @@ export class HL7Service {
         segments.push(pid.toHL7String());
       });
     } else {
-      console.warn("⚠️ [Hospital] Пациенты не переданы в buildHL7Response!");
       console.warn(patients.length)
     }
 
     const hl7Response = segments.join("\r") + "\r";
-    console.log("📤 [Hospital] HL7 ответ (готов к отправке):\n", hl7Response.replace(/\r/g, "\n"));
+    console.log("[Hospital] Sending response:\n", hl7Response.replace(/\r/g, "\n"));
     return hl7Response;
   }
 
