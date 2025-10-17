@@ -143,7 +143,7 @@ export class HL7Service {
       httpsAgent: agent,
     });
 
-    console.log("received result (receptionBackend)", res);
+    console.log("received result (receptionBackend)", res.data);
 
     return res.data;
   }
@@ -173,5 +173,4 @@ export class HL7Service {
     console.log("[Reception] Extracted patients:", patients);
     return patients;
   }
-
 }
