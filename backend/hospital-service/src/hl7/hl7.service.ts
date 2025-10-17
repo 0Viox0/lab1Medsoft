@@ -31,7 +31,13 @@ export class HL7Service {
 
   parseHL7Text(message: string): HL7Message {
     try {
-      console.log("[Hospital] Received HL7:\n", message.replace(/\r/g, "\n"));
+      // console.log("[Hospital] Received HL7:\n", message.replace(/\r/g, "\n"));
+      // console.log(
+      //   "<<<< message received:\n",
+      //   message.replace(/\r/g, "\n"),
+      //   "\n",
+      // );
+
       const parsed = HL7Message.parse(message);
       return parsed;
     } catch (err) {
@@ -46,7 +52,7 @@ export class HL7Service {
 
     const messageType = msh?.field(8)?.getValue()?.toString().split("^")[0];
     const triggerEvent = msh?.field(8)?.getValue()?.toString().split("^")[1];
-    console.log(`HL7 Type: ${messageType}, Event: ${triggerEvent}`);
+    // console.log(`HL7 Type: ${messageType}, Event: ${triggerEvent}`);
 
     if (messageType === "QBP" && triggerEvent === "Q22") {
       // const patients = this.getCachedPatients();
@@ -91,7 +97,7 @@ export class HL7Service {
       action === "CREATE" ||
       (messageType === "ADT" && triggerEvent === "A01")
     ) {
-      console.log("[Hospital] Creating patient...");
+      // console.log("[Hospital] Creating patient...");
       await this.patients.createFromHL7({
         id,
         firstName,
@@ -107,12 +113,12 @@ export class HL7Service {
       action === "DELETE" ||
       (messageType === "ADT" && triggerEvent === "A03")
     ) {
-      console.log("[Hospital] Deleting Patient...");
+      // console.log("[Hospital] Deleting Patient...");
       await this.patients.deleteById(id);
       return await this.buildHL7Response(parsed, []);
     }
 
-    console.log("[Hospital] Unresolved action");
+    // console.log("[Hospital] Unresolved action");
     return await this.buildHL7Response(parsed, []);
   }
 
@@ -130,8 +136,12 @@ export class HL7Service {
     msh.field(2).setValue("^~\\&");
     msh.field(3).setValue("HospitalSystem");
     msh.field(4).setValue("Main");
-    msh.field(5).setValue(originalMSH?.field(3).toString() || "Reception");
-    msh.field(6).setValue(originalMSH?.field(4).toString() || "FrontDesk");
+    msh
+      .field(5)
+      .setValue(originalMSH?.field(3).getValue().toString() || "Reception");
+    msh
+      .field(6)
+      .setValue(originalMSH?.field(4).getValue().toString() || "FrontDesk");
     msh.field(7).setValue(timestamp);
     msh.field(9).setValue("RSP^K22");
     msh.field(10).setValue(uuidv4());
@@ -141,7 +151,7 @@ export class HL7Service {
     // MSA
     const msa = new HL7Segment(response, "MSA");
     msa.field(1).setValue("AA");
-    msa.field(2).setValue(originalMSH?.field(10).toString() || "");
+    msa.field(2).setValue(originalMSH?.field(10).getValue().toString() || "");
 
     const segments = [msh.toHL7String(), msa.toHL7String()];
     // patients = this.cachedPatients;
@@ -165,10 +175,17 @@ export class HL7Service {
     }
 
     const hl7Response = segments.join("\r") + "\r";
-    console.log(
-      "[Hospital] Sending response:\n",
-      hl7Response.replace(/\r/g, "\n"),
-    );
+    // console.log(
+    //   ">>>> message sent:\n",
+    //   hl7Response.replace(/\r/g, "\n"),
+    //   "\n",
+    //   "\n",
+    // );
+    // console.log(
+    //
+    //   "[Hospital] Sending response:\n",
+    //   hl7Response.replace(/\r/g, "\n"),
+    // );
     return hl7Response;
   }
 

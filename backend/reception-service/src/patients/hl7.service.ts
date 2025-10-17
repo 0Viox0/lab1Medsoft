@@ -56,7 +56,7 @@ export class HL7Service {
     msh.field(8).setValue(msgType);
     msh.field(9).setValue(messageControlId);
     msh.field(10).setValue("P");
-    msh.field(11).setValue("2.3");
+    msh.field(11).setValue("2.5");
 
     const segments: string[] = [msh.toHL7String()];
 
@@ -138,12 +138,19 @@ export class HL7Service {
       rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
     });
 
+    console.log(">>>> message sent:\n", hl7Message.replace(/\r/g, "\n"), "\n");
+
     const res = await axios.post(this.hospitalUrl, hl7Message, {
       headers: { "Content-Type": "text/plain" },
       httpsAgent: agent,
     });
 
-    console.log("received result (receptionBackend)", res.data);
+    console.log(
+      "<<<< message received:\n",
+      res.data.replace(/\r/g, "\n"),
+      "\n",
+      "\n",
+    );
 
     return res.data;
   }
@@ -169,8 +176,8 @@ export class HL7Service {
       index++;
     }
 
-    console.log(message.toHL7String());
-    console.log("[Reception] Extracted patients:", patients);
+    // console.log(message.toHL7String());
+    // console.log("[Reception] Extracted patients:", patients);
     return patients;
   }
 

@@ -30,7 +30,7 @@ export class PatientsService {
       birthDate: pid.birthDate,
     });
 
-    console.log(p);
+    // console.log(p);
     await this.repo.save(p);
 
     this.eventEmitter.emit("patients.updated", this.last10());

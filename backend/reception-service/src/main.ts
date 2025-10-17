@@ -32,7 +32,7 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log(
-    `Reception service (HTTPS) listening on https://localhost:${port}`,
+    `Reception service (HTTPS) listening on https://localhost:${port}\n`,
   );
 }
 
