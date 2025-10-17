@@ -25,10 +25,12 @@ export class HL7Service {
   }): string {
     const msg = new HL7Message(HL7Version.v2_5);
     const msh = new HL7Segment(msg, "MSH");
+
     const timestamp = new Date()
       .toISOString()
       .replace(/[-:T.Z]/g, "")
       .slice(0, 14);
+
     const messageControlId = uuidv4();
 
     let msgType: string;
@@ -43,7 +45,7 @@ export class HL7Service {
         msgType = "QBP^Q22";
         break;
       default:
-        msgType = "ADT^A08"; // Default to update
+        msgType = "ADT^A08";
     }
 
     msh.field(1).setValue("|");
@@ -72,8 +74,8 @@ export class HL7Service {
 
       segments.push(pid.toHL7String());
     } else if (payload.action === "DELETE") {
-      // For DELETE (ADT^A03 - Discharge), we need PID and EVN segments
       const evn = new HL7Segment(msg, "EVN");
+
       evn.field(1).setValue("A03");
       evn.field(2).setValue(timestamp);
       evn.field(4).setValue("D");
@@ -81,9 +83,11 @@ export class HL7Service {
       segments.push(evn.toHL7String());
 
       const pid = new HL7Segment(msg, "PID");
+
       if (payload.id) {
         pid.field(3).setValue(payload.id);
       }
+
       if (payload.lastName || payload.firstName) {
         pid
           .field(5)
@@ -101,6 +105,7 @@ export class HL7Service {
       segments.push(pv1.toHL7String());
     } else if (payload.action === "GET") {
       const qpd = new HL7Segment(msg, "QPD");
+
       qpd.field(1).setValue("Q22^Get Patients^HL7");
       qpd.field(2).setValue(messageControlId);
       qpd.field(3).setValue("");
@@ -108,25 +113,13 @@ export class HL7Service {
       segments.push(qpd.toHL7String());
 
       const rcp = new HL7Segment(msg, "RCP");
+
       rcp.field(1).setValue("I");
-      rcp.field(2).setValue("10^RD"); // Quantity limit, why not?)
+      rcp.field(2).setValue("10^RD");
 
       segments.push(rcp.toHL7String());
-
-      // Optional: Add search criteria if provided
-      if (payload.id || payload.lastName || payload.firstName) {
-        const queryParams = [];
-        if (payload.id) queryParams.push(`@PID.3.1^${payload.id}`);
-        if (payload.lastName) queryParams.push(`@PID.5.1^${payload.lastName}`);
-        if (payload.firstName)
-          queryParams.push(`@PID.5.2^${payload.firstName}`);
-
-        // Update QPD with search parameters
-        qpd.field(3).setValue(queryParams.join("~"));
-      }
     }
 
-    const hl7MessageForLogging = segments.join("\n") + "\n";
     const hl7Message = segments.join("\r") + "\r";
 
     return hl7Message;
@@ -176,8 +169,6 @@ export class HL7Service {
       index++;
     }
 
-    // console.log(message.toHL7String());
-    // console.log("[Reception] Extracted patients:", patients);
     return patients;
   }
 
@@ -186,10 +177,8 @@ export class HL7Service {
       return new Date(); // Return current date if input is empty
     }
 
-    // Remove any non-digit characters and take only the date/time parts
     const cleanDate = hl7Date.replace(/[^\d]/g, "");
 
-    // Extract components with safe defaults
     const year =
       cleanDate.length >= 4
         ? parseInt(cleanDate.substring(0, 4))
@@ -198,7 +187,6 @@ export class HL7Service {
       cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0; // Month is 0-indexed
     const day = cleanDate.length >= 8 ? parseInt(cleanDate.substring(6, 8)) : 1;
 
-    // Time components (optional in HL7)
     const hour =
       cleanDate.length >= 10 ? parseInt(cleanDate.substring(8, 10)) : 0;
     const minute =
@@ -206,7 +194,6 @@ export class HL7Service {
     const second =
       cleanDate.length >= 14 ? parseInt(cleanDate.substring(12, 14)) : 0;
 
-    // Create and return the Date object
     return new Date(year, month, day, hour, minute, second);
   }
 }

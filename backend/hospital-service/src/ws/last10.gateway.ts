@@ -29,4 +29,3 @@ export class Last10Gateway {
     this.server.emit("last10", list);
   }
 }
-

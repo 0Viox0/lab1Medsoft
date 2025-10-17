@@ -22,15 +22,12 @@ export class HL7Controller {
       return { ok: false, reason: "no HL7 text found" };
     }
 
-    // console.log("Incoming HL7:\n", hl7Text);
-
     console.log("<<<< message received:\n", hl7Text.replace(/\r/g, "\n"), "\n");
 
     try {
       const parsed = this.hl7Service.parseHL7Text(hl7Text);
       const result = await this.hl7Service.processHL7(parsed);
 
-      // console.log("Outgoing HL7:\n", result);
       console.log(
         ">>>> message sent:\n",
         result.replace(/\r/g, "\n"),

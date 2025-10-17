@@ -7,41 +7,23 @@ import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class HL7Service {
-  // private cachedPatients: any[] = [];
   constructor(private readonly patients: PatientsService) {
     const envPath = path.resolve(process.cwd(), ".env");
     dotenv.config({ path: envPath });
-    // this.refreshCache();
-    // setInterval(() => this.refreshCache(), 5000);
   }
 
-  // private async refreshCache() {
-  //   try {
-  //     this.cachedPatients = await this.patients.last10();
-  //     console.log("[Hospital] Cache updated:", this.cachedPatients.length);
-  //   } catch (err) {
-  //     console.error("[Hospital] Cannot update cache:", err);
-  //   }
-  // }
-
   private async getCachedPatients() {
-    // return this.cachedPatients;
     return await this.patients.last10();
   }
 
   parseHL7Text(message: string): HL7Message {
     try {
-      // console.log("[Hospital] Received HL7:\n", message.replace(/\r/g, "\n"));
-      // console.log(
-      //   "<<<< message received:\n",
-      //   message.replace(/\r/g, "\n"),
-      //   "\n",
-      // );
-
       const parsed = HL7Message.parse(message);
+
       return parsed;
     } catch (err) {
       console.error("Cannot parse HL7:", err);
+
       throw new Error("Invalid HL7 message");
     }
   }
@@ -52,20 +34,20 @@ export class HL7Service {
 
     const messageType = msh?.field(8)?.getValue()?.toString().split("^")[0];
     const triggerEvent = msh?.field(8)?.getValue()?.toString().split("^")[1];
-    // console.log(`HL7 Type: ${messageType}, Event: ${triggerEvent}`);
 
     if (messageType === "QBP" && triggerEvent === "Q22") {
-      // const patients = this.getCachedPatients();
       const patients = await this.patients.last10();
 
       if (!patients || patients.length === 0) {
         console.warn("[Hospital] No patients found, sending dummy.");
+
         const dummy = {
           id: "TEST123",
           firstName: "John",
           lastName: "Doe",
           birthDate: "19800101",
         };
+
         return await this.buildHL7Response(parsed, [dummy]);
       }
 
@@ -74,14 +56,18 @@ export class HL7Service {
 
     if (!pid) {
       console.log("NO PID Segment in message");
+
       return await this.buildHL7Response(parsed, []);
     }
 
     const id = pid.field(3).getValue().toString();
+
     if (messageType === "ADT" && triggerEvent === "A03") {
       await this.patients.deleteById(id);
+
       return await this.buildHL7Response(parsed, []);
     }
+
     const [lastName, firstName] = pid
       .field(5)
       ?.getValue()
@@ -97,7 +83,6 @@ export class HL7Service {
       action === "CREATE" ||
       (messageType === "ADT" && triggerEvent === "A01")
     ) {
-      // console.log("[Hospital] Creating patient...");
       await this.patients.createFromHL7({
         id,
         firstName,
@@ -105,20 +90,19 @@ export class HL7Service {
         birthDate,
         raw: parsed.toHL7String(),
       });
+
       return await this.buildHL7Response(parsed, []);
     }
 
-    // --- DELETE ---
     if (
       action === "DELETE" ||
       (messageType === "ADT" && triggerEvent === "A03")
     ) {
-      // console.log("[Hospital] Deleting Patient...");
       await this.patients.deleteById(id);
+
       return await this.buildHL7Response(parsed, []);
     }
 
-    // console.log("[Hospital] Unresolved action");
     return await this.buildHL7Response(parsed, []);
   }
 
@@ -131,7 +115,6 @@ export class HL7Service {
       .slice(0, 14);
     const originalMSH = originalMessage.getSegment("MSH");
 
-    // MSH
     msh.field(1).setValue("|");
     msh.field(2).setValue("^~\\&");
     msh.field(3).setValue("HospitalSystem");
@@ -148,20 +131,18 @@ export class HL7Service {
     msh.field(11).setValue("P");
     msh.field(12).setValue("2.5");
 
-    // MSA
     const msa = new HL7Segment(response, "MSA");
     msa.field(1).setValue("AA");
     msa.field(2).setValue(originalMSH?.field(10).getValue().toString() || "");
 
     const segments = [msh.toHL7String(), msa.toHL7String()];
-    // patients = this.cachedPatients;
     patients = await this.patients.last10();
-    // PID
+
     if (patients.length > 0) {
-      // patients = this.cachedPatients;
       patients = await this.patients.last10();
       patients.forEach((patient, index) => {
         const pid = new HL7Segment(response, "PID");
+
         pid.field(1).setValue((index + 1).toString());
         pid.field(3).setValue(patient.id);
         pid
@@ -175,22 +156,13 @@ export class HL7Service {
     }
 
     const hl7Response = segments.join("\r") + "\r";
-    // console.log(
-    //   ">>>> message sent:\n",
-    //   hl7Response.replace(/\r/g, "\n"),
-    //   "\n",
-    //   "\n",
-    // );
-    // console.log(
-    //
-    //   "[Hospital] Sending response:\n",
-    //   hl7Response.replace(/\r/g, "\n"),
-    // );
+
     return hl7Response;
   }
 
   hl7Date(date: string | Date): string {
     if (!date) return "";
+
     const d = new Date(date);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -198,18 +170,17 @@ export class HL7Service {
     const h = String(d.getHours()).padStart(2, "0");
     const min = String(d.getMinutes()).padStart(2, "0");
     const s = String(d.getSeconds()).padStart(2, "0");
+
     return `${y}${m}${day}${h}${min}${s}`;
   }
 
   hl7ToDate(hl7Date: string): Date {
     if (!hl7Date || hl7Date.trim() === "") {
-      return new Date(); // Return current date if input is empty
+      return new Date();
     }
 
-    // Remove any non-digit characters and take only the date/time parts
     const cleanDate = hl7Date.replace(/[^\d]/g, "");
 
-    // Extract components with safe defaults
     const year =
       cleanDate.length >= 4
         ? parseInt(cleanDate.substring(0, 4))
@@ -218,7 +189,6 @@ export class HL7Service {
       cleanDate.length >= 6 ? parseInt(cleanDate.substring(4, 6)) - 1 : 0; // Month is 0-indexed
     const day = cleanDate.length >= 8 ? parseInt(cleanDate.substring(6, 8)) : 1;
 
-    // Time components (optional in HL7)
     const hour =
       cleanDate.length >= 10 ? parseInt(cleanDate.substring(8, 10)) : 0;
     const minute =
@@ -226,7 +196,6 @@ export class HL7Service {
     const second =
       cleanDate.length >= 14 ? parseInt(cleanDate.substring(12, 14)) : 0;
 
-    // Create and return the Date object
     return new Date(year, month, day, hour, minute, second);
   }
 }
