@@ -5,11 +5,11 @@ import {
 } from "@nestjs/websockets";
 import { Server } from "socket.io";
 import { PatientsService } from "../patients/patients.service";
-import { Patient } from "../patients/patient.entity";
 import { OnEvent } from "@nestjs/event-emitter";
+import { Patient } from "./entities/patient.entity";
 
 @WebSocketGateway({ cors: { origin: "*" }, namespace: "/" })
-export class Last10Gateway {
+export class PatientGateway {
   @WebSocketServer()
   server: Server;
 
@@ -17,15 +17,15 @@ export class Last10Gateway {
 
   @SubscribeMessage("requestAllPatients")
   async handleRequestAllPatients() {
-    this.emitLast10(await this.patientsService.last10());
+    this.emitLast10Patients(await this.patientsService.getLast10());
   }
 
   @OnEvent("patients.updated")
-  async handlePatientsUpdated(patients: Patient[]) {
-    this.emitLast10(await this.patientsService.last10());
+  async handlePatientsUpdated() {
+    this.emitLast10Patients(await this.patientsService.getLast10());
   }
 
-  emitLast10(list: Patient[]) {
+  emitLast10Patients(list: Patient[]) {
     this.server.emit("last10", list);
   }
 }

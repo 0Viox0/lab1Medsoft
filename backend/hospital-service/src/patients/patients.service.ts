@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { Patient } from "./patient.entity";
 import { v4 as uuidv4 } from "uuid";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import { Patient } from "./entities/patient.entity";
 
 @Injectable()
 export class PatientsService {
@@ -12,7 +12,7 @@ export class PatientsService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async last10() {
+  async getLast10() {
     return this.repo
       .createQueryBuilder("p")
       .orderBy("p.createdAt", "DESC")
@@ -32,7 +32,7 @@ export class PatientsService {
 
     await this.repo.save(p);
 
-    this.eventEmitter.emit("patients.updated", this.last10());
+    this.eventEmitter.emit("patients.updated", this.getLast10());
 
     return p;
   }
@@ -40,7 +40,7 @@ export class PatientsService {
   async deleteById(id: string) {
     const res = await this.repo.delete(id);
 
-    this.eventEmitter.emit("patients.updated", this.last10());
+    this.eventEmitter.emit("patients.updated", this.getLast10());
 
     return res.affected > 0;
   }
