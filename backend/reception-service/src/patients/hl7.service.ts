@@ -5,6 +5,9 @@ import path from "path";
 import dotenv from "dotenv";
 import { HL7Message, HL7Segment, HL7Version } from "hl7v2";
 
+import { HL7_CONFIG, HL7Action, HL7Payload } from "./hl7.types";
+import { PatientResponseDto } from "./dto/patientResponse.dto";
+
 @Injectable()
 export class HL7Service {
   private hospitalUrl: string;
@@ -16,115 +19,31 @@ export class HL7Service {
     this.hospitalUrl = process.env.HOSPITAL_URL || "https://localhost:3001/hl7";
   }
 
-  buildHL7v2(payload: {
-    firstName?: string;
-    lastName?: string;
-    birthDate?: string;
-    id?: string;
-    action: "CREATE" | "DELETE" | "GET";
-  }): string {
+  public buildHL7v2(payload: HL7Payload): string {
     const msg = new HL7Message(HL7Version.v2_5);
-    const msh = new HL7Segment(msg, "MSH");
+    const segments: string[] = [this.buildMSHSegment(msg, payload.action)];
 
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[-:T.Z]/g, "")
-      .slice(0, 14);
-
-    const messageControlId = uuidv4();
-
-    let msgType: string;
     switch (payload.action) {
       case "CREATE":
-        msgType = "ADT^A01";
+        segments.push(this.buildPIDSegment(msg, payload));
         break;
       case "DELETE":
-        msgType = "ADT^A03";
+        segments.push(this.buildEVNSegment(msg));
+        segments.push(this.buildPIDSegment(msg, payload));
+        segments.push(this.buildPV1Segment(msg));
         break;
       case "GET":
-        msgType = "QBP^Q22";
+        segments.push(
+          this.buildQPDSegment(msg, this.generateMessageControlId()),
+        );
+        segments.push(this.buildRCPSegment(msg));
         break;
-      default:
-        msgType = "ADT^A08";
     }
 
-    msh.field(1).setValue("|");
-    msh.field(2).setValue("^~\\&");
-    msh.field(3).setValue("Reception");
-    msh.field(4).setValue("FrontDesk");
-    msh.field(5).setValue("HospitalSystem");
-    msh.field(6).setValue("Main");
-    msh.field(7).setValue(timestamp);
-    msh.field(8).setValue(msgType);
-    msh.field(9).setValue(messageControlId);
-    msh.field(10).setValue("P");
-    msh.field(11).setValue("2.5");
-
-    const segments: string[] = [msh.toHL7String()];
-
-    if (payload.action === "CREATE") {
-      const pid = new HL7Segment(msg, "PID");
-      const pidId = payload.id || uuidv4();
-      pid.field(3).setValue(pidId);
-      pid
-        .field(5)
-        .setValue(`${payload.lastName || ""}^${payload.firstName || ""}`);
-      pid.field(7).setValue(payload.birthDate || "");
-      pid.field(26).setValue(payload.action);
-
-      segments.push(pid.toHL7String());
-    } else if (payload.action === "DELETE") {
-      const evn = new HL7Segment(msg, "EVN");
-
-      evn.field(1).setValue("A03");
-      evn.field(2).setValue(timestamp);
-      evn.field(4).setValue("D");
-
-      segments.push(evn.toHL7String());
-
-      const pid = new HL7Segment(msg, "PID");
-
-      if (payload.id) {
-        pid.field(3).setValue(payload.id);
-      }
-
-      if (payload.lastName || payload.firstName) {
-        pid
-          .field(5)
-          .setValue(`${payload.lastName || ""}^${payload.firstName || ""}`);
-      }
-
-      segments.push(pid.toHL7String());
-
-      const pv1 = new HL7Segment(msg, "PV1");
-      pv1.field(1).setValue("1");
-      pv1.field(2).setValue("D");
-      pv1.field(3).setValue("");
-
-      segments.push(pv1.toHL7String());
-    } else if (payload.action === "GET") {
-      const qpd = new HL7Segment(msg, "QPD");
-
-      qpd.field(1).setValue("Q22^Get Patients^HL7");
-      qpd.field(2).setValue(messageControlId);
-      qpd.field(3).setValue("");
-
-      segments.push(qpd.toHL7String());
-
-      const rcp = new HL7Segment(msg, "RCP");
-
-      rcp.field(1).setValue("I");
-      rcp.field(2).setValue("10^RD");
-
-      segments.push(rcp.toHL7String());
-    }
-
-    const hl7Message = segments.join("\r") + "\r";
-
-    return hl7Message;
+    return segments.join("\r") + "\r";
   }
 
-  async sendHL7(hl7Message: string) {
+  public async sendHL7(hl7Message: string) {
     const https = require("https");
     const agent = new https.Agent({
       rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
@@ -147,9 +66,9 @@ export class HL7Service {
     return res.data;
   }
 
-  parseHL7Response(hl7Message: string) {
+  public parseHL7Response(hl7Message: string) {
     const message = HL7Message.parse(hl7Message);
-    const patients = [];
+    const patients: PatientResponseDto[] = [];
     let index = 0;
 
     while (true) {
@@ -158,6 +77,7 @@ export class HL7Service {
 
       const nameField = pid.field(5).getValue()?.toString() || "";
       const [lastName, firstName] = nameField.split("^");
+
       patients.push({
         id: pid.field(3).getValue()?.toString() || "",
         firstName: firstName || "",
@@ -171,7 +91,111 @@ export class HL7Service {
     return patients;
   }
 
-  hl7ToDate(hl7Date: string): Date {
+  private buildMSHSegment(msg: HL7Message, action: HL7Action) {
+    const msh = new HL7Segment(msg, "MSH");
+    const timestamp = this.getHl7Timestamp();
+    const messageControlId = uuidv4();
+
+    msh.field(1).setValue("|");
+    msh.field(2).setValue("^~\\&");
+    msh.field(3).setValue(HL7_CONFIG.SENDING_APPLICATION);
+    msh.field(4).setValue(HL7_CONFIG.SENDING_FACILITY);
+    msh.field(5).setValue(HL7_CONFIG.RECEIVING_APPLICATION);
+    msh.field(6).setValue(HL7_CONFIG.RECEIVING_FACILITY);
+    msh.field(7).setValue(timestamp);
+    msh.field(8).setValue(this.getMsgType(action));
+    msh.field(9).setValue(messageControlId);
+    msh.field(10).setValue("P");
+    msh.field(11).setValue("2.5");
+
+    return msh.toHL7String();
+  }
+
+  private buildPIDSegment(msg: HL7Message, payload: HL7Payload): string {
+    const pid = new HL7Segment(msg, "PID");
+    const pidId = payload.id || uuidv4();
+
+    pid.field(3).setValue(pidId);
+
+    if (payload.lastName || payload.firstName) {
+      pid
+        .field(5)
+        .setValue(`${payload.lastName || ""}^${payload.firstName || ""}`);
+    }
+
+    if (payload.birthDate) {
+      pid.field(7).setValue(payload.birthDate);
+    }
+
+    if (payload.action === "CREATE") {
+      pid.field(26).setValue(payload.action);
+    }
+
+    return pid.toHL7String();
+  }
+
+  private buildEVNSegment(msg: HL7Message): string {
+    const evn = new HL7Segment(msg, "EVN");
+    const timestamp = this.getHl7Timestamp();
+
+    evn.field(1).setValue("A03");
+    evn.field(2).setValue(timestamp);
+    evn.field(4).setValue("D");
+
+    return evn.toHL7String();
+  }
+
+  private buildPV1Segment(msg: HL7Message): string {
+    const pv1 = new HL7Segment(msg, "PV1");
+
+    pv1.field(1).setValue("1");
+    pv1.field(2).setValue("D");
+    pv1.field(3).setValue("");
+
+    return pv1.toHL7String();
+  }
+
+  private buildQPDSegment(msg: HL7Message, messageControlId: string): string {
+    const qpd = new HL7Segment(msg, "QPD");
+
+    qpd.field(1).setValue("Q22^Get Patients^HL7");
+    qpd.field(2).setValue(messageControlId);
+    qpd.field(3).setValue("");
+
+    return qpd.toHL7String();
+  }
+
+  private buildRCPSegment(msg: HL7Message) {
+    const rcp = new HL7Segment(msg, "RCP");
+
+    rcp.field(1).setValue("I");
+    rcp.field(2).setValue("10^RD");
+
+    return rcp.toHL7String();
+  }
+
+  private getHl7Timestamp() {
+    return new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, "")
+      .slice(0, 14);
+  }
+
+  private getMsgType(action: HL7Action) {
+    const msgTypes = {
+      CREATE: "ADT^A01",
+      DELETE: "ADT^A03",
+      GET: "QBP^Q22",
+    };
+
+    return msgTypes[action] || "ADT^A08";
+  }
+
+  private generateMessageControlId(): string {
+    return uuidv4();
+  }
+
+  private hl7ToDate(hl7Date: string): Date {
     if (!hl7Date || hl7Date.trim() === "") {
       return new Date();
     }
