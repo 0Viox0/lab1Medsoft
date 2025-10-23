@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { PatientsService } from "../patients/patients.service";
 import { HL7Message, HL7Segment, HL7Version } from "hl7v2";
 import { v4 as uuidv4 } from "uuid";
-import { Patient } from "../patients/entities/patient.entity";
+import { Patient } from "../entities/patient.entity";
 
 interface HL7MessageInfo {
   messageType: string;

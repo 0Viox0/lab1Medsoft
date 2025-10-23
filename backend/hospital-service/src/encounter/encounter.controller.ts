@@ -1,60 +1,102 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
-  Param,
-  Query,
   HttpStatus,
   ValidationPipe,
+  InternalServerErrorException,
 } from "@nestjs/common";
-import { CreateEncounterDto } from "./dto/createEncounter.dto";
-import { FhirEncounterService } from "./encounter.service";
+import { EncounterService } from "./encounter.service";
+import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
 
 @Controller("encounters")
-export class EncounterController {
-  constructor(private readonly fhirEncounterService: FhirEncounterService) {}
+export class EncounterReceiverController {
+  private serverURl = "https://localhost:3002";
+
+  constructor(private readonly encounterService: EncounterService) {}
 
   @Post()
-  async createEncounter(
-    @Body(new ValidationPipe({ transform: true }))
-    createEncounterDto: CreateEncounterDto,
+  async receiveEncounter(
+    @Body(new ValidationPipe({ transform: true, whitelist: true }))
+    encounterData: ReceiveEncounterDto,
   ) {
-    const result =
-      await this.fhirEncounterService.createEncounter(createEncounterDto);
+    try {
+      await this.encounterService.sendToFhirServer(
+        encounterData,
+        this.serverURl,
+      );
 
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: "Encounter successfully created",
-      data: result,
-    };
-  }
+      const savedEncounter =
+        await this.encounterService.processAndSaveEncounter(
+          encounterData as ReceiveEncounterDto,
+        );
 
-  @Get(":id")
-  async getEncounter(@Param("id") id: string) {
-    const encounter = await this.fhirEncounterService.getEncounter(id);
-
-    return {
-      statusCode: HttpStatus.OK,
-      data: encounter,
-    };
-  }
-
-  @Get()
-  async getEncountersByPatient(@Query("patientId") patientId: string) {
-    if (!patientId) {
       return {
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: "patientId query parameter is required",
+        statusCode: HttpStatus.CREATED,
+        message: "Encounter successfully received and saved",
+        data: {
+          id: savedEncounter.id,
+          status: savedEncounter.status,
+          patient: savedEncounter.patientDisplay,
+          practitioner: savedEncounter.practitionerDisplay,
+          periodStart: savedEncounter.periodStart,
+        },
       };
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+      // return {
+      //   statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      //   message: `Failed to process encounter: ${error.message}`,
+      // };
     }
-
-    const encounters =
-      await this.fhirEncounterService.findEncountersByPatient(patientId);
-
-    return {
-      statusCode: HttpStatus.OK,
-      data: encounters,
-    };
   }
+
+  // @Get()
+  // async getAllEncounters() {
+  //   const encounters = await this.encounterService.getAllEncounters();
+  //
+  //   return {
+  //     statusCode: HttpStatus.OK,
+  //     data: encounters,
+  //   };
+  // }
+  //
+  // @Get(":id")
+  // async getEncounter(@Param("id", ParseIntPipe) id: number) {
+  //   const encounter = await this.encounterService.getEncounterById(id);
+  //
+  //   if (!encounter) {
+  //     return {
+  //       statusCode: HttpStatus.NOT_FOUND,
+  //       message: "Encounter not found",
+  //     };
+  //   }
+  //
+  //   return {
+  //     statusCode: HttpStatus.OK,
+  //     data: encounter,
+  //   };
+  // }
+  //
+  // @Get("patient/:patientRef")
+  // async getEncountersByPatient(@Param("patientRef") patientRef: string) {
+  //   const encounters =
+  //     await this.encounterService.getEncountersByPatient(patientRef);
+  //
+  //   return {
+  //     statusCode: HttpStatus.OK,
+  //     data: encounters,
+  //   };
+  // }
+  //
+  // @Get("status/:status")
+  // async getEncountersByStatus(@Param("status") status: string) {
+  //   const encounters =
+  //     await this.encounterService.getEncountersByStatus(status);
+  //
+  //   return {
+  //     statusCode: HttpStatus.OK,
+  //     data: encounters,
+  //   };
+  // }
 }

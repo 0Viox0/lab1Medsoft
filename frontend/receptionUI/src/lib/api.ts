@@ -1,16 +1,17 @@
+import type { VisitData } from "@/components/widgets/RegisterVisitForm";
 import type { Patient, PatientWithId } from "@/shared/types";
 
 const BASE_URL = "https://localhost:3000";
-const PATH = "/patients";
 
-const url = BASE_URL + PATH;
+const patientsUrl = BASE_URL + "/patients";
+const registerVisitUrl = BASE_URL + "/encounters";
 
 export const createApi = () => {
-  return { createPatient, deletePatientById, getAllPatients };
+  return { createPatient, deletePatientById, getAllPatients, registerVisit };
 };
 
 const createPatient = async (patient: Patient) => {
-  await fetch(url, {
+  await fetch(patientsUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -24,7 +25,7 @@ const createPatient = async (patient: Patient) => {
 };
 
 const deletePatientById = async (id: string) => {
-  await fetch(url, {
+  await fetch(patientsUrl, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -42,7 +43,7 @@ export type BackendPacientResponse = {
 };
 
 const getAllPatients = async (): Promise<PatientWithId[] | []> => {
-  const response = await fetch(url);
+  const response = await fetch(patientsUrl);
 
   if (response.ok) {
     const result = (await response.json()) as BackendPacientResponse[];
@@ -56,4 +57,30 @@ const getAllPatients = async (): Promise<PatientWithId[] | []> => {
   }
 
   return [];
+};
+
+type RegisterVisitResult = {
+  ok: boolean;
+  message: string;
+};
+
+const registerVisit = async (
+  visitData: VisitData,
+): Promise<RegisterVisitResult> => {
+  const response = await fetch(registerVisitUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(visitData),
+  });
+
+  if (response.ok) {
+    return { ok: true, message: "Посещение успешно зарегистрировано!" };
+  }
+
+  const errorData = await response.json();
+  const message = `Ошибка: ${errorData.message || "Неизвестная ошибка"}`;
+
+  return { ok: false, message };
 };

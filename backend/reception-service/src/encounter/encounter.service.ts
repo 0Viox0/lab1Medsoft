@@ -1,7 +1,6 @@
 import { Injectable, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import axios, { AxiosResponse } from "axios";
 import { CreateEncounterDto } from "./dto/createEncounter.dto";
-import { firstValueFrom } from "rxjs";
 import { HttpsClientService } from "../httpsClient/httpsClient.service";
 
 @Injectable()
@@ -10,21 +9,15 @@ export class FhirEncounterService {
 
   constructor(private readonly httpsClientService: HttpsClientService) {}
 
-  // Основной FHIR сервер (где хранятся данные)
   private readonly primaryFhirServer =
-    process.env.PRIMARY_FHIR_SERVER || "https://localhost:8080/encounters";
+    process.env.PRIMARY_FHIR_SERVER || "https://localhost:3001";
 
-  /**
-   * Создает запись о посещении в FHIR формате
-   */
   async createEncounter(createEncounterDto: CreateEncounterDto): Promise<any> {
     try {
-      // Преобразуем DTO в FHIR Encounter ресурс
       const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
 
-      this.logger.log("Creating FHIR Encounter...");
+      this.logger.log("Creating FHIR Encounter...", fhirEncounter);
 
-      // Отправляем в основной FHIR сервер
       const primaryResponse = await this.sendToFhirServer(
         fhirEncounter,
         this.primaryFhirServer,
@@ -112,12 +105,23 @@ export class FhirEncounterService {
     try {
       const httpsAgent = this.httpsClientService.getHttpsAgent();
 
-      const result = await axios.post(`${serverUrl}/Encounter`, fhirEncounter, {
-        headers: {
-          "Content-Type": "application/fhir+json",
-          httpsAgent,
+      const result = await axios.post(
+        `${serverUrl}/encounters`,
+        fhirEncounter,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          httpsAgent: httpsAgent,
         },
-      });
+      );
+
+      if (result.status >= 300 || result.status <= 200) {
+        throw new HttpException(
+          `Failed to create encounter: ${result.statusText}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
 
       return result.data;
     } catch (error) {

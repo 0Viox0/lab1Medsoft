@@ -27,6 +27,11 @@ export const Sidebar: FC<SidebarProps> = ({ appName }) => {
                 -
               </SelectSquare>
             </Link>
+            <Link to="/registerVisit">
+              <SelectSquare selected={location.pathname === "/registerVisit"}>
+                {"->"}
+              </SelectSquare>
+            </Link>
           </div>
           <Line className="mt-[10px] mr-[32px]" />
           <div>{<Outlet />}</div>
