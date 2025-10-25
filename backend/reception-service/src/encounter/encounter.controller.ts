@@ -41,14 +41,11 @@ export class EncounterController {
   //   };
   // }
 
-  // @Get()
-  // async getEncountersByPatient() {
-  //   const encounters =
-  //     await this.fhirEncounterService.findEncountersByPatient(patientId);
-  //
-  //   return {
-  //     statusCode: HttpStatus.OK,
-  //     data: encounters,
-  //   };
-  // }
+  @Get()
+  async getEncountersByPatient() {
+    // const encounters =
+    //   await this.fhirEncounterService.findEncountersByPatient(patientId);
+    // this.fhirEncounterService.ge;
+    return this.fhirEncounterService.getEncounters();
+  }
 }

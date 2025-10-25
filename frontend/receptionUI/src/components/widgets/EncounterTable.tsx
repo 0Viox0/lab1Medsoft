@@ -9,25 +9,21 @@ import {
 } from "@/components/ui/table";
 import type { FC } from "react";
 import type { EncounterResponseDto } from "@/shared/types";
-import type { FilterState } from "./FilterForm";
+import { ChangeVisitButton } from "./ChangeVisitButton";
 
 export type EncounterTableProps = {
   tableCaption?: string;
   encounters: EncounterResponseDto[];
-  filter?: FilterState;
 };
 
 export const EncounterTable: FC<EncounterTableProps> = ({
   tableCaption,
   encounters,
-  filter,
 }) => {
-  // Функция для форматирования даты
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
-  // Функция для форматирования времени
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("ru-RU", {
       hour: "2-digit",
@@ -35,7 +31,6 @@ export const EncounterTable: FC<EncounterTableProps> = ({
     });
   };
 
-  // Функция для получения статуса на русском
   const getStatusText = (status: string) => {
     const statusMap: { [key: string]: string } = {
       planned: "Запланирован",
@@ -47,25 +42,8 @@ export const EncounterTable: FC<EncounterTableProps> = ({
     return statusMap[status] || status;
   };
 
-  // Функция для фильтрации encounters
-  const filteredEncounters = encounters.filter((encounter) => {
-    if (!filter) return true;
-
-    const matchesId = encounter.id
-      .toLowerCase()
-      .includes(filter.id.toLowerCase());
-    const matchesPatientName = encounter.patient.display
-      .toLowerCase()
-      .includes(filter.name.toLowerCase());
-    const matchesPractitionerName = encounter.practitioner.display
-      .toLowerCase()
-      .includes(filter.lastName.toLowerCase());
-
-    return matchesId && matchesPatientName && matchesPractitionerName;
-  });
-
   return (
-    <Table className="w-full mt-6">
+    <Table className="w-full mt-4">
       <TableCaption>
         {tableCaption || "Список посещений пациентов"}
       </TableCaption>
@@ -78,12 +56,14 @@ export const EncounterTable: FC<EncounterTableProps> = ({
           <TableHead className="w-[100px]">Время</TableHead>
           <TableHead className="w-[100px]">Локация</TableHead>
           <TableHead>Причины</TableHead>
-          <TableHead className="w-[100px]">ID</TableHead>
+          <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredEncounters.map((encounter) => (
-          <TableRow key={encounter.id}>
+        {encounters.map((encounter) => (
+          <TableRow
+            key={`${encounter.patient.reference}${encounter.practitioner.reference}${encounter.period.start}`}
+          >
             <TableCell>
               <span
                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -117,7 +97,14 @@ export const EncounterTable: FC<EncounterTableProps> = ({
                 </div>
               </div>
             </TableCell>
-            <TableCell>{formatDate(encounter.period.start)}</TableCell>
+            <TableCell>
+              <div>{formatDate(encounter.period.start)}</div>
+              {encounter.period.end && (
+                <div className="text-xs text-muted-foreground">
+                  - {formatDate(encounter.period.end)}
+                </div>
+              )}
+            </TableCell>
             <TableCell>
               <div>
                 <div>{formatTime(encounter.period.start)}</div>
@@ -150,10 +137,8 @@ export const EncounterTable: FC<EncounterTableProps> = ({
                 )}
               </div>
             </TableCell>
-            <TableCell className="text-sm font-mono">
-              {encounter.id.length > 8
-                ? `${encounter.id.slice(0, 8)}...`
-                : encounter.id}
+            <TableCell>
+              <ChangeVisitButton forEncounter={encounter} />
             </TableCell>
           </TableRow>
         ))}

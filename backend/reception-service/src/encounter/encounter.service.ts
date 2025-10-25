@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import axios, { AxiosResponse } from "axios";
 import { CreateEncounterDto } from "./dto/createEncounter.dto";
 import { HttpsClientService } from "../httpsClient/httpsClient.service";
+import { EncounterResponseDto } from "./dto/encounterResponse.dto";
 
 @Injectable()
 export class FhirEncounterService {
@@ -9,10 +10,11 @@ export class FhirEncounterService {
 
   constructor(private readonly httpsClientService: HttpsClientService) {}
 
-  private readonly primaryFhirServer =
-    process.env.PRIMARY_FHIR_SERVER || "https://localhost:3001";
+  private readonly primaryFhirServer = "https://localhost:3001";
 
-  async createEncounter(createEncounterDto: CreateEncounterDto): Promise<any> {
+  public async createEncounter(
+    createEncounterDto: CreateEncounterDto,
+  ): Promise<any> {
     try {
       const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
 
@@ -35,6 +37,68 @@ export class FhirEncounterService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  public async getEncounters() {
+    const response = await this.requestEncountersFromHospital();
+
+    const visits = (response.data as unknown[]).map(
+      this.mapHospitalToResponseDto,
+    );
+
+    this.logger.log("received visits: ", visits);
+
+    return visits;
+  }
+
+  private mapHospitalToResponseDto(hospitalData: any): EncounterResponseDto {
+    // Извлекаем reason codes из FHIR формата
+    const reasonCodes =
+      hospitalData.reasonCode
+        ?.map((reason: any) => reason.coding?.[0]?.code)
+        .filter(Boolean) || [];
+
+    // Извлекаем location
+    const location =
+      hospitalData.location?.[0]?.location?.display ||
+      hospitalData.location?.[0]?.location?.reference?.replace("Location/", "");
+
+    return {
+      id: hospitalData.id || `encounter-${hospitalData.meta?.versionId}`,
+      status: hospitalData.status,
+      patient: {
+        reference: hospitalData.subject?.reference,
+        display: hospitalData.subject?.display,
+      },
+      practitioner: {
+        reference: hospitalData.participant?.[0]?.individual?.reference,
+        display: hospitalData.participant?.[0]?.individual?.display,
+      },
+      period: {
+        start: hospitalData.period?.start,
+        end: hospitalData.period?.end,
+      },
+      location: location,
+      reasonCodes: reasonCodes,
+      lastUpdated: hospitalData.meta?.lastUpdated || new Date().toISOString(),
+    };
+  }
+
+  private async requestEncountersFromHospital() {
+    const agent = this.httpsClientService.getHttpsAgent();
+
+    const response = await axios.get(`${this.primaryFhirServer}/encounters`, {
+      httpsAgent: agent,
+    });
+
+    if (response.status > 300 || response.status < 200) {
+      throw new HttpException(
+        `Failed to fetch encounter: ${response.statusText}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return response.data;
   }
 
   /**
@@ -117,34 +181,6 @@ export class FhirEncounterService {
       );
 
       if (result.status >= 300 || result.status <= 200) {
-        throw new HttpException(
-          `Failed to create encounter: ${result.statusText}`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-
-      return result.data;
-    } catch (error) {
-      this.logger.error(
-        `Error sending to FHIR server ${serverUrl}:`,
-        error.response?.data || error.message,
-      );
-      throw error;
-    }
-  }
-
-  private async getEncounters(serverUrl: string): Promise<AxiosResponse> {
-    try {
-      const httpsAgent = this.httpsClientService.getHttpsAgent();
-
-      const result = await axios.get(`${serverUrl}/encounters`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        httpsAgent: httpsAgent,
-      });
-
-      if (result.status >= 300 || result.status < 200) {
         throw new HttpException(
           `Failed to create encounter: ${result.statusText}`,
           HttpStatus.INTERNAL_SERVER_ERROR,

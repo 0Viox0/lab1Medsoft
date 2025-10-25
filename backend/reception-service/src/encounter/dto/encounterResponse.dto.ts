@@ -1,12 +1,4 @@
-export type Patient = {
-  name: string;
-  lastName: string;
-  dateOfBirth: Date;
-};
-
-export type PatientWithId = Patient & { id: string };
-
-export type EncounterResponseDto = {
+export class EncounterResponseDto {
   id: string;
   status: string;
   patient: {
@@ -24,4 +16,4 @@ export type EncounterResponseDto = {
   location?: string;
   reasonCodes: string[];
   lastUpdated: string;
-};
+}

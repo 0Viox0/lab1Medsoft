@@ -4,7 +4,7 @@ import { EncounterTable } from "@/components/widgets/EncounterTable";
 import { PatientSelect } from "@/components/widgets/PatientSelect";
 import { RegisterVisitForm } from "@/components/widgets/RegisterVisitForm";
 import { useApi } from "@/shared/hooks/useApi";
-import type { PatientWithId } from "@/shared/types";
+import type { EncounterResponseDto, PatientWithId } from "@/shared/types";
 import { useEffect, useState } from "react";
 
 export const RegisterVisit = () => {
@@ -12,6 +12,9 @@ export const RegisterVisit = () => {
   const [selectedPatient, setSelectedPatient] = useState<PatientWithId | null>(
     null,
   );
+  const [patientEncounters, setPatientEncounters] = useState<
+    EncounterResponseDto[]
+  >([]);
 
   const api = useApi();
 
@@ -29,6 +32,21 @@ export const RegisterVisit = () => {
     setSelectedPatient(patient);
   };
 
+  useEffect(() => {
+    const fetchPatientEncounters = async () => {
+      const encounters = await api.getEncoutners();
+      setPatientEncounters(
+        encounters.filter(
+          (encounter) => encounter.patient.reference === selectedPatient?.id,
+        ),
+      );
+    };
+
+    if (selectedPatient) {
+      fetchPatientEncounters();
+    }
+  }, [selectedPatient]);
+
   return (
     <>
       <TabName>Регистрация посещения пациента</TabName>
@@ -37,7 +55,7 @@ export const RegisterVisit = () => {
         onPatientSelect={handlePatientSelect}
       />
       {selectedPatient && <CreateNewVisitButton forPatient={selectedPatient} />}
-      {selectedPatient && <EncounterTable encounters={[]} />}
+      {selectedPatient && <EncounterTable encounters={patientEncounters} />}
     </>
   );
 };

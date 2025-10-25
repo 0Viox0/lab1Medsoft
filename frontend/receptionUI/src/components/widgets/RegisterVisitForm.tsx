@@ -32,7 +32,7 @@ export type VisitData = {
 };
 
 export type RegisterVisitProps = {
-  predefinedVisitData?: VisitData["patient"];
+  predefinedVisitData?: Partial<VisitData>;
   className?: string;
 };
 
@@ -41,14 +41,15 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
   className,
 }) => {
   const [formData, setFormData] = useState<VisitFormData>({
-    patientReference: predefinedVisitData?.reference ?? "",
-    patientDisplay: predefinedVisitData?.display ?? "",
-    practitionerReference: "",
-    practitionerDisplay: "",
-    status: "in-progress",
-    periodStart: "",
-    periodEnd: "",
-    location: "",
+    patientReference: predefinedVisitData?.patient?.reference ?? "",
+    patientDisplay: predefinedVisitData?.patient?.display ?? "",
+    practitionerReference: predefinedVisitData?.practitioner?.reference ?? "",
+    practitionerDisplay: predefinedVisitData?.practitioner?.display ?? "",
+    status: predefinedVisitData?.status ?? "in-progress",
+    periodStart: predefinedVisitData?.periodStart ?? "",
+    periodEnd: predefinedVisitData?.periodEnd ?? "",
+    location: predefinedVisitData?.location ?? "",
+    // reasonCodes: predefinedVisitData?.reasonCodes ?? "",
     reasonCodes: "",
   });
 
@@ -59,11 +60,30 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
 
   useEffect(() => {
     if (predefinedVisitData) {
+      // setFormData((prevData) => ({
+      //   ...prevData,
+      //   patientReference:
+      //     predefinedVisitData?.reference || prevData.patientReference,
+      //   patientDisplay: predefinedVisitData?.display || prevData.patientDisplay,
+      // }));
       setFormData((prevData) => ({
         ...prevData,
         patientReference:
-          predefinedVisitData?.reference || prevData.patientReference,
-        patientDisplay: predefinedVisitData?.display || prevData.patientDisplay,
+          predefinedVisitData?.patient?.reference ?? prevData.patientReference,
+        patientDisplay:
+          predefinedVisitData?.patient?.display ?? prevData.patientDisplay,
+        practitionerReference:
+          predefinedVisitData?.practitioner?.reference ??
+          prevData.practitionerReference,
+        practitionerDisplay:
+          predefinedVisitData?.practitioner?.display ??
+          prevData.practitionerDisplay,
+        status: predefinedVisitData?.status ?? prevData.status,
+        periodStart: predefinedVisitData?.periodStart ?? prevData.periodStart,
+        periodEnd: predefinedVisitData?.periodEnd ?? prevData.periodStart,
+        location: predefinedVisitData?.location ?? prevData.location,
+        // reasonCodes: predefinedVisitData?.reasonCodes ?? "",
+        reasonCodes: "",
       }));
     }
   }, [predefinedVisitData]);

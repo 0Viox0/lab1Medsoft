@@ -1,5 +1,9 @@
 import type { VisitData } from "@/components/widgets/RegisterVisitForm";
-import type { Patient, PatientWithId } from "@/shared/types";
+import type {
+  EncounterResponseDto,
+  Patient,
+  PatientWithId,
+} from "@/shared/types";
 
 const BASE_URL = "https://localhost:3000";
 
@@ -7,7 +11,13 @@ const patientsUrl = BASE_URL + "/patients";
 const registerVisitUrl = BASE_URL + "/encounters";
 
 export const createApi = () => {
-  return { createPatient, deletePatientById, getAllPatients, registerVisit };
+  return {
+    createPatient,
+    deletePatientById,
+    getAllPatients,
+    registerVisit,
+    getEncoutners,
+  };
 };
 
 const createPatient = async (patient: Patient) => {
@@ -83,4 +93,15 @@ const registerVisit = async (
   const message = `Ошибка: ${errorData.message || "Неизвестная ошибка"}`;
 
   return { ok: false, message };
+};
+
+const getEncoutners = async (): Promise<EncounterResponseDto[]> => {
+  const response = await fetch(registerVisitUrl);
+
+  if (response.ok) {
+    const data = await response.json();
+    return data;
+  }
+
+  return [];
 };
