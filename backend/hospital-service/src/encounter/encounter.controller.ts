@@ -10,13 +10,17 @@ import {
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
 import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @Controller("encounters")
 export class EncounterReceiverController {
   private serverURl = "https://localhost:3002";
   private readonly logger = new Logger(EncounterReceiverController.name);
 
-  constructor(private readonly encounterService: EncounterService) {}
+  constructor(
+    private readonly encounterService: EncounterService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   @Post()
   async receiveEncounter(
@@ -33,6 +37,8 @@ export class EncounterReceiverController {
         await this.encounterService.processAndSaveEncounter(
           encounterData as FhirEncounterDto,
         );
+
+      this.eventEmitter.emit("patients.updated");
 
       return {
         statusCode: HttpStatus.CREATED,

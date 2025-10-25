@@ -24,6 +24,9 @@ export class Patient {
   @CreateDateColumn()
   createdAt: Date;
 
-  @OneToMany(() => EncounterEntity, (encounter) => encounter.patient)
+  @OneToMany(() => EncounterEntity, (encounter) => encounter.patient, {
+    cascade: true,
+    onDelete: "CASCADE",
+  })
   encounters: EncounterEntity[];
 }

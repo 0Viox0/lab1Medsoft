@@ -28,6 +28,7 @@ export const useSocket = (url: string = "https://localhost:3001") => {
           name: item.firstName,
           lastName: item.lastName,
           dateOfBirth: new Date(item.birthDate),
+          visitStatuses: item.encounters.map((encounter) => encounter.status),
         })),
       );
     });

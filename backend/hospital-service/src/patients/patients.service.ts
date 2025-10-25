@@ -15,6 +15,7 @@ export class PatientsService {
   async getLast10() {
     return this.repo
       .createQueryBuilder("p")
+      .leftJoinAndSelect("p.encounters", "encounters")
       .orderBy("p.createdAt", "DESC")
       .limit(10)
       .getMany();

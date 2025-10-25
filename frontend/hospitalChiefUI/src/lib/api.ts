@@ -39,6 +39,9 @@ export type BackendPacientResponse = {
   firstName: string;
   id: string;
   lastName: string;
+  encounters: {
+    status: string;
+  }[];
 };
 
 const getAllPatients = async (): Promise<PatientWithId[] | []> => {

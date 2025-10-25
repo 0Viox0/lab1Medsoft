@@ -38,7 +38,6 @@ export const RegisterVisit = () => {
       />
       {selectedPatient && <CreateNewVisitButton forPatient={selectedPatient} />}
       {selectedPatient && <EncounterTable encounters={[]} />}
-      {/* <RegisterVisitForm /> */}
     </>
   );
 };

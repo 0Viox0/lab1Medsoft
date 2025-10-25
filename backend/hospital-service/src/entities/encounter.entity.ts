@@ -17,7 +17,9 @@ export class EncounterEntity {
   @Column({ type: "varchar" })
   status: string;
 
-  @ManyToOne(() => Patient, (patient) => patient.encounters)
+  @ManyToOne(() => Patient, (patient) => patient.encounters, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "patientId" })
   patient: Patient;
 
