@@ -2,12 +2,11 @@ import { Module } from "@nestjs/common";
 import { HttpsClientModule } from "../httpsClient/httpsClient.module";
 import { EncounterReceiverController } from "./encounter.controller";
 import { EncounterService } from "./encounter.service";
-import { EncounterEntity } from "../entities/encounter.entity";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { EncounterGateway } from "./encounter.gateway";
 
 @Module({
-  imports: [HttpsClientModule, TypeOrmModule.forFeature([EncounterEntity])],
+  imports: [HttpsClientModule],
   controllers: [EncounterReceiverController],
-  providers: [EncounterService],
+  providers: [EncounterService, EncounterGateway],
 })
 export class FhirEncounterModule {}

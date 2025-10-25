@@ -5,6 +5,8 @@ import {
   HttpStatus,
   ValidationPipe,
   InternalServerErrorException,
+  Get,
+  Logger,
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
 import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
@@ -12,6 +14,7 @@ import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
 @Controller("encounters")
 export class EncounterReceiverController {
   private serverURl = "https://localhost:3002";
+  private readonly logger = new Logger(EncounterReceiverController.name);
 
   constructor(private readonly encounterService: EncounterService) {}
 
@@ -44,23 +47,25 @@ export class EncounterReceiverController {
       };
     } catch (error) {
       throw new InternalServerErrorException(error);
-      // return {
-      //   statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      //   message: `Failed to process encounter: ${error.message}`,
-      // };
     }
   }
 
-  // @Get()
-  // async getAllEncounters() {
-  //   const encounters = await this.encounterService.getAllEncounters();
-  //
-  //   return {
-  //     statusCode: HttpStatus.OK,
-  //     data: encounters,
-  //   };
-  // }
-  //
+  @Get()
+  async getAllEncounters() {
+    const encounters = await this.encounterService.getAllEncounters();
+
+    const fhirEncounters = encounters.map((encounter) =>
+      this.encounterService.mapEntityToFhir(encounter),
+    );
+
+    this.logger.log("getting all encounters", fhirEncounters);
+
+    return {
+      statusCode: HttpStatus.OK,
+      data: fhirEncounters,
+    };
+  }
+
   // @Get(":id")
   // async getEncounter(@Param("id", ParseIntPipe) id: number) {
   //   const encounter = await this.encounterService.getEncounterById(id);
@@ -77,7 +82,7 @@ export class EncounterReceiverController {
   //     data: encounter,
   //   };
   // }
-  //
+
   // @Get("patient/:patientRef")
   // async getEncountersByPatient(@Param("patientRef") patientRef: string) {
   //   const encounters =

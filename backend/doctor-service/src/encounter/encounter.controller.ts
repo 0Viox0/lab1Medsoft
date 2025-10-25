@@ -4,27 +4,35 @@ import {
   Body,
   HttpStatus,
   ValidationPipe,
-  InternalServerErrorException,
+  Logger,
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
-import { HttpsClientService } from "../httpsClient/httpsClient.service";
 
 @Controller("encounters")
 export class EncounterReceiverController {
-  constructor(private readonly encounterService: EncounterService) {}
+  private readonly logger = new Logger(EncounterReceiverController.name);
+
+  constructor(
+    private readonly encounterService: EncounterService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   @Post()
   async receiveEncounter(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
     encounterData: ReceiveEncounterDto,
   ) {
-    console.log(
+    this.logger.log(
       "service has received notification that patient was set a visit",
       encounterData,
     );
 
-    return "hehe";
+    this.eventEmitter.emit("visits.updated");
+
+    return { statusCode: HttpStatus.OK };
+    // return "hehe";
     // try {
     //   const savedEncounter =
     //     await this.encounterService.processAndSaveEncounter(

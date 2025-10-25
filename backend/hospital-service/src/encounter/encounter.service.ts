@@ -70,6 +70,96 @@ export class EncounterService {
     return entity;
   }
 
+  public mapEntityToFhir(entity: EncounterEntity): any {
+    const reasonCodes = entity.reasonCodes
+      ? JSON.parse(entity.reasonCodes)
+      : [];
+
+    let fhirData: any;
+
+    if (entity.rawFhirData) {
+      fhirData = JSON.parse(entity.rawFhirData);
+      fhirData.status = entity.status;
+      fhirData.subject.reference = entity.patientReference;
+      fhirData.subject.display = entity.patientDisplay;
+      fhirData.period.start = entity.periodStart.toISOString();
+      fhirData.period.end = entity.periodEnd
+        ? entity.periodEnd.toISOString()
+        : undefined;
+    } else {
+      fhirData = {
+        resourceType: "Encounter",
+        id: entity.fhirId || `encounter-${entity.id}`,
+        status: entity.status,
+        class: {
+          system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          code: "AMB",
+          display: "ambulatory",
+        },
+        subject: {
+          reference: entity.patientReference,
+          display: entity.patientDisplay,
+        },
+        participant: [
+          {
+            individual: {
+              reference: entity.practitionerReference,
+              display: entity.practitionerDisplay,
+            },
+          },
+        ],
+        period: {
+          start: entity.periodStart.toISOString(),
+          end: entity.periodEnd ? entity.periodEnd.toISOString() : undefined,
+        },
+        meta: {
+          lastUpdated: entity.updatedAt.toISOString(),
+          versionId: entity.id.toString(),
+        },
+      };
+    }
+
+    if (entity.location) {
+      fhirData.location = [
+        {
+          location: {
+            reference: `Location/${entity.location}`,
+            display: entity.location,
+          },
+        },
+      ];
+    } else {
+      delete fhirData.location;
+    }
+
+    if (reasonCodes.length > 0) {
+      fhirData.reasonCode = reasonCodes.map((code: string) => ({
+        coding: [
+          {
+            system: "http://snomed.info/sct",
+            code: code,
+            display: this.getReasonDisplay(code),
+          },
+        ],
+      }));
+    } else {
+      delete fhirData.reasonCode;
+    }
+
+    return fhirData;
+  }
+
+  private getReasonDisplay(code: string): string {
+    const reasonMap = {
+      "185349003": "Follow-up visit",
+      "270427003": "Patient-initiated encounter",
+      "308335008": "Patient visit",
+      "390906007": "Follow-up encounter",
+      "185317003": "Visit for check-up",
+    };
+    return reasonMap[code] || "Medical encounter";
+  }
+
   async getAllEncounters(): Promise<EncounterEntity[]> {
     return this.encounterRepository.find({
       order: { createdAt: "DESC" },

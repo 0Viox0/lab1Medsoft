@@ -211,7 +211,7 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({ className }) => {
               <label className="block text-sm font-medium mb-2">Статус *</label>
               <select
                 value={formData.status}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-black"
                 onChange={(event) =>
                   handleInputChange("status", event.target.value)
                 }

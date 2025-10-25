@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { EventEmitterModule } from "@nestjs/event-emitter";
-import { PatientsModule } from "./patients/patient.module";
 import { FhirEncounterModule } from "./encounter/encounter.module";
 import { HttpsClientModule } from "./httpsClient/httpsClient.module";
 import { Patient } from "./entities/patient.entity";
@@ -17,7 +16,6 @@ import { EncounterEntity } from "./entities/encounter.entity";
       synchronize: true,
     }),
     TypeOrmModule.forFeature([Patient]),
-    PatientsModule,
     FhirEncounterModule,
     HttpsClientModule,
   ],
