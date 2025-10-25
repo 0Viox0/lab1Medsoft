@@ -1,4 +1,4 @@
-import { useState, type FC } from "react";
+import { useEffect, useState, type FC } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useApi } from "@/shared/hooks/useApi";
@@ -32,13 +32,17 @@ export type VisitData = {
 };
 
 export type RegisterVisitProps = {
+  predefinedVisitData?: VisitData["patient"];
   className?: string;
 };
 
-export const RegisterVisitForm: FC<RegisterVisitProps> = ({ className }) => {
+export const RegisterVisitForm: FC<RegisterVisitProps> = ({
+  predefinedVisitData,
+  className,
+}) => {
   const [formData, setFormData] = useState<VisitFormData>({
-    patientReference: "",
-    patientDisplay: "",
+    patientReference: predefinedVisitData?.reference ?? "",
+    patientDisplay: predefinedVisitData?.display ?? "",
     practitionerReference: "",
     practitionerDisplay: "",
     status: "in-progress",
@@ -52,6 +56,17 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({ className }) => {
   const [submitMessage, setSubmitMessage] = useState("");
 
   const api = useApi();
+
+  useEffect(() => {
+    if (predefinedVisitData) {
+      setFormData((prevData) => ({
+        ...prevData,
+        patientReference:
+          predefinedVisitData?.reference || prevData.patientReference,
+        patientDisplay: predefinedVisitData?.display || prevData.patientDisplay,
+      }));
+    }
+  }, [predefinedVisitData]);
 
   const resetRegisterVisitForm = () => {
     setFormData({
@@ -120,6 +135,7 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({ className }) => {
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className={cn("p-6 max-w-4xl mx-auto", className)}>
       <h1 className="text-2xl font-bold mb-6">

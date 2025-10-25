@@ -7,6 +7,7 @@ import {
   // Query,
   HttpStatus,
   ValidationPipe,
+  Get,
 } from "@nestjs/common";
 import { CreateEncounterDto } from "./dto/createEncounter.dto";
 import { FhirEncounterService } from "./encounter.service";
@@ -39,16 +40,9 @@ export class EncounterController {
   //     data: encounter,
   //   };
   // }
-  //
+
   // @Get()
-  // async getEncountersByPatient(@Query("patientId") patientId: string) {
-  //   if (!patientId) {
-  //     return {
-  //       statusCode: HttpStatus.BAD_REQUEST,
-  //       message: "patientId query parameter is required",
-  //     };
-  //   }
-  //
+  // async getEncountersByPatient() {
   //   const encounters =
   //     await this.fhirEncounterService.findEncountersByPatient(patientId);
   //

@@ -5,6 +5,7 @@ import { Add } from "./pages/Add";
 import { Redirect } from "./pages/Redirect";
 import { Delete } from "./pages/Delete";
 import { RegisterVisit } from "./pages/RegisterVisit";
+import { EditVisit } from "./pages/EditVisit";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="add" element={<Add />} />
             <Route path="delete" element={<Delete />} />
             <Route path="registerVisit" element={<RegisterVisit />} />
+            <Route path="editVisit" element={<EditVisit />} />
           </Route>
         </Routes>
       </ThemeProvider>

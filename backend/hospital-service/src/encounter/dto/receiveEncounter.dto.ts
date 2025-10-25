@@ -57,7 +57,7 @@ class ReasonCodeDto {
 //   reasonCode: ReasonCodeDto[];
 // };
 
-export type ReceiveEncounterDto = {
+export type FhirEncounterDto = {
   resourceType: string;
   status: string;
   class: {

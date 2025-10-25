@@ -14,20 +14,20 @@ import type { FilterState } from "./FilterForm";
 export type EncounterTableProps = {
   tableCaption?: string;
   encounters: EncounterResponseDto[];
-  patientFilter: FilterState;
-  doctorFilter: FilterState;
+  filter?: FilterState;
 };
 
 export const EncounterTable: FC<EncounterTableProps> = ({
   tableCaption,
   encounters,
-  patientFilter,
-  doctorFilter,
+  filter,
 }) => {
+  // Функция для форматирования даты
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
+  // Функция для форматирования времени
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("ru-RU", {
       hour: "2-digit",
@@ -35,6 +35,7 @@ export const EncounterTable: FC<EncounterTableProps> = ({
     });
   };
 
+  // Функция для получения статуса на русском
   const getStatusText = (status: string) => {
     const statusMap: { [key: string]: string } = {
       planned: "Запланирован",
@@ -46,41 +47,25 @@ export const EncounterTable: FC<EncounterTableProps> = ({
     return statusMap[status] || status;
   };
 
+  // Функция для фильтрации encounters
   const filteredEncounters = encounters.filter((encounter) => {
-    if (!patientFilter && !doctorFilter) return true;
+    if (!filter) return true;
 
-    const matchesPatientId = patientFilter
-      ? encounter.patient.reference
-          .toLowerCase()
-          .includes(patientFilter.id.toLowerCase())
-      : true;
-    const matchesPatientName = patientFilter
-      ? encounter.patient.display
-          .toLowerCase()
-          .includes(patientFilter.name.toLowerCase())
-      : true;
+    const matchesId = encounter.id
+      .toLowerCase()
+      .includes(filter.id.toLowerCase());
+    const matchesPatientName = encounter.patient.display
+      .toLowerCase()
+      .includes(filter.name.toLowerCase());
+    const matchesPractitionerName = encounter.practitioner.display
+      .toLowerCase()
+      .includes(filter.lastName.toLowerCase());
 
-    const matchesDoctortId = doctorFilter
-      ? encounter.practitioner.reference
-          .toLowerCase()
-          .includes(doctorFilter.id.toLowerCase())
-      : true;
-    const matchesDoctorName = doctorFilter
-      ? encounter.practitioner.display
-          .toLowerCase()
-          .includes(doctorFilter.name.toLowerCase())
-      : true;
-
-    return (
-      matchesPatientId &&
-      matchesPatientName &&
-      matchesDoctortId &&
-      matchesDoctorName
-    );
+    return matchesId && matchesPatientName && matchesPractitionerName;
   });
 
   return (
-    <Table className="w-full">
+    <Table className="w-full mt-6">
       <TableCaption>
         {tableCaption || "Список посещений пациентов"}
       </TableCaption>
@@ -93,13 +78,12 @@ export const EncounterTable: FC<EncounterTableProps> = ({
           <TableHead className="w-[100px]">Время</TableHead>
           <TableHead className="w-[100px]">Локация</TableHead>
           <TableHead>Причины</TableHead>
+          <TableHead className="w-[100px]">ID</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {filteredEncounters.map((encounter) => (
-          <TableRow
-            key={`${encounter.patient.reference}${encounter.practitioner.reference}${encounter.period.start}`}
-          >
+          <TableRow key={encounter.id}>
             <TableCell>
               <span
                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -133,14 +117,7 @@ export const EncounterTable: FC<EncounterTableProps> = ({
                 </div>
               </div>
             </TableCell>
-            <TableCell>
-              <div>{formatDate(encounter.period.start)}</div>
-              {encounter.period.end && (
-                <div className="text-xs text-muted-foreground">
-                  - {formatDate(encounter.period.end)}
-                </div>
-              )}
-            </TableCell>
+            <TableCell>{formatDate(encounter.period.start)}</TableCell>
             <TableCell>
               <div>
                 <div>{formatTime(encounter.period.start)}</div>
@@ -172,6 +149,11 @@ export const EncounterTable: FC<EncounterTableProps> = ({
                   </span>
                 )}
               </div>
+            </TableCell>
+            <TableCell className="text-sm font-mono">
+              {encounter.id.length > 8
+                ? `${encounter.id.slice(0, 8)}...`
+                : encounter.id}
             </TableCell>
           </TableRow>
         ))}

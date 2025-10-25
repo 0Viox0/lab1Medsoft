@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { EncounterEntity } from "../entities/encounter.entity";
-import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
+import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
 import axios, { AxiosResponse } from "axios";
 import { HttpsClientService } from "../httpsClient/httpsClient.service";
 
@@ -17,7 +17,7 @@ export class EncounterService {
   ) {}
 
   async processAndSaveEncounter(
-    encounterData: ReceiveEncounterDto,
+    encounterData: FhirEncounterDto,
   ): Promise<EncounterEntity> {
     try {
       this.logger.log("Processing FHIR Encounter data...");
@@ -41,7 +41,7 @@ export class EncounterService {
   }
 
   private mapFhirToEntity(
-    fhirData: ReceiveEncounterDto,
+    fhirData: FhirEncounterDto,
   ): Partial<EncounterEntity> {
     // Extract reason codes
     const reasonCodes =
@@ -56,8 +56,7 @@ export class EncounterService {
 
     const entity: Partial<EncounterEntity> = {
       status: fhirData.status,
-      patientReference: fhirData.subject.reference,
-      patientDisplay: fhirData.subject.display,
+      patientId: fhirData.subject.reference,
       practitionerReference: fhirData.participant[0]?.individual.reference,
       practitionerDisplay: fhirData.participant[0]?.individual.display,
       periodStart: new Date(fhirData.period.start),
@@ -80,8 +79,8 @@ export class EncounterService {
     if (entity.rawFhirData) {
       fhirData = JSON.parse(entity.rawFhirData);
       fhirData.status = entity.status;
-      fhirData.subject.reference = entity.patientReference;
-      fhirData.subject.display = entity.patientDisplay;
+      // fhirData.subject.reference = entity.patientReference;
+      fhirData.subject.reference = entity.patient.id;
       fhirData.period.start = entity.periodStart.toISOString();
       fhirData.period.end = entity.periodEnd
         ? entity.periodEnd.toISOString()
@@ -89,7 +88,7 @@ export class EncounterService {
     } else {
       fhirData = {
         resourceType: "Encounter",
-        id: entity.fhirId || `encounter-${entity.id}`,
+        id: `encounter-${entity.id}`,
         status: entity.status,
         class: {
           system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
@@ -97,8 +96,8 @@ export class EncounterService {
           display: "ambulatory",
         },
         subject: {
-          reference: entity.patientReference,
-          display: entity.patientDisplay,
+          reference: entity.patient.id,
+          display: `${entity.patient.firstName} ${entity.patient.lastName}`,
         },
         participant: [
           {
@@ -160,8 +159,11 @@ export class EncounterService {
     return reasonMap[code] || "Medical encounter";
   }
 
-  async getAllEncounters(): Promise<EncounterEntity[]> {
-    return this.encounterRepository.find({
+  async getAllEncounters() {
+    return await this.encounterRepository.find({
+      relations: {
+        patient: true,
+      },
       order: { createdAt: "DESC" },
     });
   }
@@ -170,14 +172,14 @@ export class EncounterService {
     return this.encounterRepository.findOne({ where: { id } });
   }
 
-  async getEncountersByPatient(
-    patientReference: string,
-  ): Promise<EncounterEntity[]> {
-    return this.encounterRepository.find({
-      where: { patientReference },
-      order: { periodStart: "DESC" },
-    });
-  }
+  // async getEncountersByPatient(
+  //   patientReference: string,
+  // ): Promise<EncounterEntity[]> {
+  //   return this.encounterRepository.find({
+  //     where: { patientReference },
+  //     order: { periodStart: "DESC" },
+  //   });
+  // }
 
   async getEncountersByStatus(status: string): Promise<EncounterEntity[]> {
     return this.encounterRepository.find({

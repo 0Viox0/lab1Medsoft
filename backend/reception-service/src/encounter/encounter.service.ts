@@ -133,6 +133,34 @@ export class FhirEncounterService {
     }
   }
 
+  private async getEncounters(serverUrl: string): Promise<AxiosResponse> {
+    try {
+      const httpsAgent = this.httpsClientService.getHttpsAgent();
+
+      const result = await axios.get(`${serverUrl}/encounters`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        httpsAgent: httpsAgent,
+      });
+
+      if (result.status >= 300 || result.status < 200) {
+        throw new HttpException(
+          `Failed to create encounter: ${result.statusText}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(
+        `Error sending to FHIR server ${serverUrl}:`,
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
+
   /**
    * Получает отображаемое название для кода причины
    */

@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn } from "typeorm";
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  CreateDateColumn,
+  OneToMany,
+} from "typeorm";
+import { EncounterEntity } from "./encounter.entity";
 
 @Entity()
 export class Patient {
@@ -16,4 +23,7 @@ export class Patient {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => EncounterEntity, (encounter) => encounter.patient)
+  encounters: EncounterEntity[];
 }

@@ -136,7 +136,7 @@ export class HL7Service {
 
   private extractPatientData(
     pidSegment: HL7Segment,
-  ): Omit<Patient, "id" | "createdAt"> {
+  ): Omit<Patient, "id" | "createdAt" | "encounters"> {
     const nameParts =
       pidSegment.field(5)?.getValue()?.toString().split("^") || [];
     const birthDate = this.hl7ToDate(
@@ -218,6 +218,7 @@ export class HL7Service {
       lastName: "Doe",
       birthDate: "19800101",
       createdAt: new Date(),
+      encounters: [],
     };
   }
 

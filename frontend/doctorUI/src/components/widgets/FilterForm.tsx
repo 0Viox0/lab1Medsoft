@@ -4,22 +4,30 @@ import { cn } from "@/lib/utils";
 
 export type FilterState = {
   name: string;
-  lastName: string;
   id: string;
 };
 
 export type FilterFormProps = {
+  heading?: string;
+  fieldNames?: {
+    name: string;
+    id: string;
+  };
   onFilterChange: (filterState: FilterState) => void;
   className?: string;
 };
 
 export const FilterForm: FC<FilterFormProps> = ({
+  heading = "Сортировать по фильтрам",
+  fieldNames = {
+    id: "Id",
+    name: "Имя",
+  },
   onFilterChange,
   className,
 }) => {
   const [filterState, setFilterState] = useState<FilterState>({
     name: "",
-    lastName: "",
     id: "",
   });
 
@@ -38,27 +46,19 @@ export const FilterForm: FC<FilterFormProps> = ({
 
   return (
     <div className={cn("space-x-[20px]", className)}>
-      <div className="text-[1.2rem] mb-[15px]">Сортировать по фильтрам</div>
+      <div className="text-[1.2rem] mb-[15px]">{heading}</div>
       <Input
         value={filterState.name}
-        placeholder="Имя"
-        className="w-[220px]"
+        placeholder={fieldNames.name}
+        className="w-[300px]"
         onChange={(event) =>
           handleFilterStateChange("name", event.target.value)
         }
       />
       <Input
-        value={filterState.lastName}
-        placeholder="Фамилия"
-        className="w-[220px]"
-        onChange={(event) =>
-          handleFilterStateChange("lastName", event.target.value)
-        }
-      />
-      <Input
         value={filterState.id}
-        placeholder="ID"
-        className="w-[100px]"
+        placeholder={fieldNames.id}
+        className="w-[300px]"
         onChange={(event) => handleFilterStateChange("id", event.target.value)}
       />
     </div>

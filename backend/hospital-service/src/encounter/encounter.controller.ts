@@ -9,7 +9,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
-import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
+import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
 
 @Controller("encounters")
 export class EncounterReceiverController {
@@ -21,7 +21,7 @@ export class EncounterReceiverController {
   @Post()
   async receiveEncounter(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
-    encounterData: ReceiveEncounterDto,
+    encounterData: FhirEncounterDto,
   ) {
     try {
       await this.encounterService.sendToFhirServer(
@@ -31,7 +31,7 @@ export class EncounterReceiverController {
 
       const savedEncounter =
         await this.encounterService.processAndSaveEncounter(
-          encounterData as ReceiveEncounterDto,
+          encounterData as FhirEncounterDto,
         );
 
       return {
@@ -40,7 +40,7 @@ export class EncounterReceiverController {
         data: {
           id: savedEncounter.id,
           status: savedEncounter.status,
-          patient: savedEncounter.patientDisplay,
+          patientId: savedEncounter.patientId,
           practitioner: savedEncounter.practitionerDisplay,
           periodStart: savedEncounter.periodStart,
         },

@@ -4,24 +4,25 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from "typeorm";
+import { Patient } from "./patient.entity";
 
 @Entity("encounters")
 export class EncounterEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "varchar", nullable: true })
-  fhirId: string;
-
   @Column({ type: "varchar" })
   status: string;
 
-  @Column({ type: "varchar" })
-  patientReference: string;
+  @ManyToOne(() => Patient, (patient) => patient.encounters)
+  @JoinColumn({ name: "patientId" })
+  patient: Patient;
 
-  @Column({ type: "varchar" })
-  patientDisplay: string;
+  @Column()
+  patientId: string;
 
   @Column({ type: "varchar" })
   practitionerReference: string;
