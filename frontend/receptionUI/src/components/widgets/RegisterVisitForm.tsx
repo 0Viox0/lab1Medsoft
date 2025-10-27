@@ -155,7 +155,15 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
 
       let registerResult: RegisterVisitResult;
       if (isEditing) {
-        registerResult = await api.changeVisit(visitData);
+        const encounterId = searchParams.get("encounterId");
+        if (encounterId) {
+          registerResult = await api.changeVisit({
+            ...visitData,
+            id: encounterId,
+          });
+        } else {
+          throw new Error("you are trying to change what you are not editing");
+        }
       } else {
         registerResult = await api.registerVisit(visitData);
       }

@@ -40,7 +40,7 @@ export class FhirEncounterService {
   }
 
   public async editEncounter(
-    createEncounterDto: CreateEncounterDto,
+    createEncounterDto: CreateEncounterDto & { id: string },
   ): Promise<any> {
     try {
       const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
@@ -131,9 +131,12 @@ export class FhirEncounterService {
   /**
    * Преобразует DTO в FHIR Encounter ресурс
    */
-  private mapToFhirEncounter(dto: CreateEncounterDto): any {
+  private mapToFhirEncounter(
+    dto: Partial<CreateEncounterDto & { id: string }>,
+  ): any {
     const encounter = {
       resourceType: "Encounter",
+      id: dto.id,
       status: dto.status,
       class: {
         system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
@@ -227,6 +230,8 @@ export class FhirEncounterService {
   ): Promise<AxiosResponse> {
     try {
       const httpsAgent = this.httpsClientService.getHttpsAgent();
+
+      console.log("WHAT WE ARE SENDING:");
 
       const result = await axios.patch(
         `${serverUrl}/encounters`,

@@ -2,7 +2,10 @@ import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { EncounterEntity } from "../entities/encounter.entity";
-import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
+import {
+  FhirEncounterDto,
+  FhirEncounterDtoWithId,
+} from "./dto/receiveEncounter.dto";
 import axios, { AxiosResponse } from "axios";
 import { HttpsClientService } from "../httpsClient/httpsClient.service";
 
@@ -41,7 +44,7 @@ export class EncounterService {
   }
 
   async processAndEditEncounter(
-    encounterData: FhirEncounterDto,
+    encounterData: FhirEncounterDtoWithId,
   ): Promise<EncounterEntity> {
     try {
       this.logger.log("Processing FHIR Encounter data...");
@@ -51,7 +54,7 @@ export class EncounterService {
 
       const existingEncounter = await this.encounterRepository.findOne({
         where: {
-          patientId: encounterEntity.patientId,
+          id: parseInt(encounterData.id),
         },
       });
 
@@ -120,8 +123,8 @@ export class EncounterService {
 
     if (entity.rawFhirData) {
       fhirData = JSON.parse(entity.rawFhirData);
+      fhirData.id = entity.id.toString();
       fhirData.status = entity.status;
-      // fhirData.subject.reference = entity.patientReference;
       fhirData.subject.reference = entity.patient.id;
       fhirData.period.start = entity.periodStart.toISOString();
       fhirData.period.end = entity.periodEnd
@@ -130,7 +133,7 @@ export class EncounterService {
     } else {
       fhirData = {
         resourceType: "Encounter",
-        id: `encounter-${entity.id}`,
+        id: `${entity.id}`,
         status: entity.status,
         class: {
           system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",

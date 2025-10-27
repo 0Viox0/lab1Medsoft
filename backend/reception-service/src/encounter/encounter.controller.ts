@@ -35,7 +35,7 @@ export class EncounterController {
   @Patch()
   async modifyEncounter(
     @Body(new ValidationPipe({ transform: true }))
-    createEncounterDto: CreateEncounterDto,
+    createEncounterDto: CreateEncounterDto & { id: string },
   ) {
     const result =
       await this.fhirEncounterService.editEncounter(createEncounterDto);

@@ -10,7 +10,10 @@ import {
   Patch,
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
-import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
+import {
+  FhirEncounterDto,
+  FhirEncounterDtoWithId,
+} from "./dto/receiveEncounter.dto";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @Controller("encounters")
@@ -60,13 +63,11 @@ export class EncounterReceiverController {
   @Patch()
   async editEncounter(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
-    encounterData: FhirEncounterDto,
+    encounterData: FhirEncounterDtoWithId,
   ) {
     try {
       const savedEncounter =
-        await this.encounterService.processAndEditEncounter(
-          encounterData as FhirEncounterDto,
-        );
+        await this.encounterService.processAndEditEncounter(encounterData);
 
       await this.encounterService.sendToFhirServer(
         encounterData,

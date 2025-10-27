@@ -12,7 +12,7 @@ export const ChangeVisitButton: FC<ChangeVisitButtonProps> = ({
 }) => {
   return (
     <Link
-      to={`/editVisit?patientId=${forEncounter.patient.reference}&patientName=${forEncounter.patient.display}&doctorId=${forEncounter.practitioner.reference}&doctorName=${forEncounter.practitioner.display}&status=${forEncounter.status}&startDateTime=${forEncounter.period.start}&endDateTime=${forEncounter.period.end}&location=${forEncounter.location}&codes=${forEncounter.reasonCodes}&edit=true`}
+      to={`/editVisit?patientId=${forEncounter.patient.reference}&patientName=${forEncounter.patient.display}&doctorId=${forEncounter.practitioner.reference}&doctorName=${forEncounter.practitioner.display}&status=${forEncounter.status}&startDateTime=${forEncounter.period.start}&endDateTime=${forEncounter.period.end}&location=${forEncounter.location}&codes=${forEncounter.reasonCodes}&edit=true&encounterId=${forEncounter.id}`}
     >
       <Button size="sm" className="bg-orange-200 hover:bg-orange-500">
         Редактировать

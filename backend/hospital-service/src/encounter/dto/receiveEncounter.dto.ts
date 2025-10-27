@@ -77,3 +77,25 @@ export type FhirEncounterDto = {
   location: LocationDto[];
   reasonCode: ReasonCodeDto[];
 };
+
+export type FhirEncounterDtoWithId = {
+  resourceType: string;
+  id: string;
+  status: string;
+  class: {
+    system: string;
+    code: string;
+    display: string;
+  };
+  subject: {
+    reference: string;
+    display: string;
+  };
+  participant: ParticipantDto[];
+  period: {
+    start: string;
+    end: string;
+  };
+  location: LocationDto[];
+  reasonCode: ReasonCodeDto[];
+};

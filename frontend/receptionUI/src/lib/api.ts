@@ -97,7 +97,7 @@ const registerVisit = async (
 };
 
 const changeVisit = async (
-  visitData: VisitData,
+  visitData: VisitData & { id: string },
 ): Promise<RegisterVisitResult> => {
   const response = await fetch(registerVisitUrl, {
     method: "PATCH",
