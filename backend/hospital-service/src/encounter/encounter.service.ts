@@ -23,12 +23,10 @@ export class EncounterService {
     encounterData: FhirEncounterDto,
   ): Promise<EncounterEntity> {
     try {
-      this.logger.log("Processing FHIR Encounter data...");
+      this.logger.log("creating FHIR Encounter data...", encounterData);
 
-      // Extract data from FHIR format
       const encounterEntity = this.mapFhirToEntity(encounterData);
 
-      // Save to database
       const savedEncounter =
         await this.encounterRepository.save(encounterEntity);
 
@@ -47,9 +45,8 @@ export class EncounterService {
     encounterData: FhirEncounterDtoWithId,
   ): Promise<EncounterEntity> {
     try {
-      this.logger.log("Processing FHIR Encounter data...");
+      this.logger.log("editing FHIR Encounter data...", encounterData);
 
-      // Extract data from FHIR format
       const encounterEntity = this.mapFhirToEntity(encounterData);
 
       const existingEncounter = await this.encounterRepository.findOne({
@@ -88,13 +85,11 @@ export class EncounterService {
   private mapFhirToEntity(
     fhirData: FhirEncounterDto,
   ): Partial<EncounterEntity> {
-    // Extract reason codes
     const reasonCodes =
       fhirData.reasonCode
         ?.map((reason) => reason.coding?.[0]?.code)
         .filter(Boolean) || [];
 
-    // Extract location
     const location =
       fhirData.location?.[0]?.location?.reference?.replace("Location/", "") ||
       fhirData.location?.[0]?.location?.display;

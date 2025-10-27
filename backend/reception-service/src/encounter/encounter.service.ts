@@ -45,7 +45,7 @@ export class FhirEncounterService {
     try {
       const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
 
-      this.logger.log("Creating FHIR Encounter...", fhirEncounter);
+      this.logger.log("Editing FHIR Encounter...", fhirEncounter);
 
       const primaryResponse = await this.sendPatchToFhirServer(
         fhirEncounter,
@@ -53,7 +53,7 @@ export class FhirEncounterService {
       );
 
       this.logger.log(
-        "Encounter successfully created and sent to external service",
+        "Encounter successfully edited and sent to external service",
       );
 
       return primaryResponse.data;
@@ -161,7 +161,6 @@ export class FhirEncounterService {
       },
     };
 
-    // Добавляем локацию если указана
     if (dto.location) {
       encounter["location"] = [
         {
@@ -173,7 +172,6 @@ export class FhirEncounterService {
       ];
     }
 
-    // Добавляем причины посещения если указаны
     if (dto.reasonCodes && dto.reasonCodes.length > 0) {
       encounter["reasonCode"] = dto.reasonCodes.map((code) => ({
         coding: [
