@@ -40,6 +40,48 @@ export class EncounterService {
     }
   }
 
+  async processAndEditEncounter(
+    encounterData: FhirEncounterDto,
+  ): Promise<EncounterEntity> {
+    try {
+      this.logger.log("Processing FHIR Encounter data...");
+
+      // Extract data from FHIR format
+      const encounterEntity = this.mapFhirToEntity(encounterData);
+
+      const existingEncounter = await this.encounterRepository.findOne({
+        where: {
+          patientId: encounterEntity.patientId,
+        },
+      });
+
+      const updatedEncounter = this.encounterRepository.merge(
+        existingEncounter,
+        encounterEntity,
+      );
+
+      return await this.encounterRepository.save(updatedEncounter);
+    } catch (error) {
+      this.logger.error("Error processing encounter:", error);
+      throw error;
+    }
+  }
+
+  public async notifyDoctorServiceAboutEncountersChange(serverUrl: string) {
+    const httpsAgent = this.httpsClientService.getHttpsAgent();
+
+    await axios.post(
+      `${serverUrl}/encounters`,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        httpsAgent: httpsAgent,
+      },
+    );
+  }
+
   private mapFhirToEntity(
     fhirData: FhirEncounterDto,
   ): Partial<EncounterEntity> {

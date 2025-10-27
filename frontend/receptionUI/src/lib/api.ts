@@ -16,6 +16,7 @@ export const createApi = () => {
     deletePatientById,
     getAllPatients,
     registerVisit,
+    changeVisit,
     getEncoutners,
   };
 };
@@ -69,7 +70,7 @@ const getAllPatients = async (): Promise<PatientWithId[] | []> => {
   return [];
 };
 
-type RegisterVisitResult = {
+export type RegisterVisitResult = {
   ok: boolean;
   message: string;
 };
@@ -87,6 +88,27 @@ const registerVisit = async (
 
   if (response.ok) {
     return { ok: true, message: "Посещение успешно зарегистрировано!" };
+  }
+
+  const errorData = await response.json();
+  const message = `Ошибка: ${errorData.message || "Неизвестная ошибка"}`;
+
+  return { ok: false, message };
+};
+
+const changeVisit = async (
+  visitData: VisitData,
+): Promise<RegisterVisitResult> => {
+  const response = await fetch(registerVisitUrl, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(visitData),
+  });
+
+  if (response.ok) {
+    return { ok: true, message: "Посещение успешно заменено!" };
   }
 
   const errorData = await response.json();

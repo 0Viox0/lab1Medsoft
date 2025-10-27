@@ -23,21 +23,29 @@ export const EditVisit = () => {
       searchParams.get("location") ||
       searchParams.get("codes")
     ) {
+      const isoToDatetimeLocal = (isoString: string): string => {
+        if (!isoString) return "";
+        return isoString.slice(0, 16);
+      };
+
       const predefinedData: Partial<VisitData> = {
         patient: {
-          display: `${searchParams.get("patientName")} ${searchParams.get("patientLastName")}`,
-          reference: `${searchParams.get("patientId")}`,
+          display: `${searchParams.get("patientName") ?? ""} ${searchParams.get("patientLastName") ?? ""}`,
+          reference: `${searchParams.get("patientId") ?? ""}`,
         },
         practitioner: {
-          display: `${searchParams.get("doctorName")}`,
-          reference: `${searchParams.get("doctorId")}`,
+          display: `${searchParams.get("doctorName") ?? ""}`,
+          reference: `${searchParams.get("doctorId") ?? ""}`,
         },
-        status: `${searchParams.get("status")}`,
-        periodStart: `${searchParams.get("startDateTime")}`,
-        periodEnd: `${searchParams.get("endDateTime")}`,
-        location: `${searchParams.get("location")}`,
-        // reasonCodes: `${searchParams.get("codes")}`,
-        reasonCodes: [],
+        status: `${searchParams.get("status") ?? "planned"}`,
+        periodStart: isoToDatetimeLocal(
+          `${searchParams.get("startDateTime") ?? ""}`,
+        ),
+        periodEnd: isoToDatetimeLocal(
+          `${searchParams.get("endDateTime") ?? ""}`,
+        ),
+        location: `${searchParams.get("location") ?? ""}`,
+        reasonCodes: `${searchParams.get("codes") ?? ""}`.split(", "),
       };
 
       setPredefinedData(predefinedData);

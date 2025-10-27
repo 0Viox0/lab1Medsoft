@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Get,
   Logger,
+  Patch,
 } from "@nestjs/common";
 import { EncounterService } from "./encounter.service";
 import { FhirEncounterDto } from "./dto/receiveEncounter.dto";
@@ -37,6 +38,40 @@ export class EncounterReceiverController {
         await this.encounterService.processAndSaveEncounter(
           encounterData as FhirEncounterDto,
         );
+
+      this.eventEmitter.emit("patients.updated");
+
+      return {
+        statusCode: HttpStatus.CREATED,
+        message: "Encounter successfully received and saved",
+        data: {
+          id: savedEncounter.id,
+          status: savedEncounter.status,
+          patientId: savedEncounter.patientId,
+          practitioner: savedEncounter.practitionerDisplay,
+          periodStart: savedEncounter.periodStart,
+        },
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  @Patch()
+  async editEncounter(
+    @Body(new ValidationPipe({ transform: true, whitelist: true }))
+    encounterData: FhirEncounterDto,
+  ) {
+    try {
+      const savedEncounter =
+        await this.encounterService.processAndEditEncounter(
+          encounterData as FhirEncounterDto,
+        );
+
+      await this.encounterService.sendToFhirServer(
+        encounterData,
+        this.serverURl,
+      );
 
       this.eventEmitter.emit("patients.updated");
 

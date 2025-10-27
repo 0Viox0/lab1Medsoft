@@ -4,12 +4,14 @@ import { Repository } from "typeorm";
 import { v4 as uuidv4 } from "uuid";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Patient } from "../entities/patient.entity";
+import { EncounterService } from "../encounter/encounter.service";
 
 @Injectable()
 export class PatientsService {
   constructor(
     @InjectRepository(Patient) private repo: Repository<Patient>,
     private eventEmitter: EventEmitter2,
+    private readonly encounterService: EncounterService,
   ) {}
 
   async getLast10() {
@@ -42,6 +44,9 @@ export class PatientsService {
     const res = await this.repo.delete(id);
 
     this.eventEmitter.emit("patients.updated", this.getLast10());
+    this.encounterService.notifyDoctorServiceAboutEncountersChange(
+      "https://localhost:3002",
+    );
 
     return res.affected > 0;
   }

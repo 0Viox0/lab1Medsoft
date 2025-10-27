@@ -2,6 +2,8 @@ import { useEffect, useState, type FC } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useApi } from "@/shared/hooks/useApi";
+import { useNavigate, useSearchParams } from "react-router";
+import type { RegisterVisitResult } from "@/lib/api";
 
 export type VisitFormData = {
   patientReference: string;
@@ -45,45 +47,55 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
     patientDisplay: predefinedVisitData?.patient?.display ?? "",
     practitionerReference: predefinedVisitData?.practitioner?.reference ?? "",
     practitionerDisplay: predefinedVisitData?.practitioner?.display ?? "",
-    status: predefinedVisitData?.status ?? "in-progress",
+    status: predefinedVisitData?.status ?? "planned",
     periodStart: predefinedVisitData?.periodStart ?? "",
     periodEnd: predefinedVisitData?.periodEnd ?? "",
     location: predefinedVisitData?.location ?? "",
-    // reasonCodes: predefinedVisitData?.reasonCodes ?? "",
-    reasonCodes: "",
+    reasonCodes: predefinedVisitData?.reasonCodes?.join(", ") ?? "",
   });
+
+  const [searchParams] = useSearchParams();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [isEditing, setIsEditing] = useState<boolean>(
+    Boolean(searchParams.get("edit")),
+  );
 
   const api = useApi();
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsEditing(Boolean(searchParams.get("edit")));
+  }, [searchParams]);
+
   useEffect(() => {
     if (predefinedVisitData) {
-      // setFormData((prevData) => ({
-      //   ...prevData,
-      //   patientReference:
-      //     predefinedVisitData?.reference || prevData.patientReference,
-      //   patientDisplay: predefinedVisitData?.display || prevData.patientDisplay,
-      // }));
       setFormData((prevData) => ({
         ...prevData,
         patientReference:
-          predefinedVisitData?.patient?.reference ?? prevData.patientReference,
+          predefinedVisitData?.patient?.reference ??
+          prevData.patientReference ??
+          "",
         patientDisplay:
-          predefinedVisitData?.patient?.display ?? prevData.patientDisplay,
+          predefinedVisitData?.patient?.display ??
+          prevData.patientDisplay ??
+          "",
         practitionerReference:
           predefinedVisitData?.practitioner?.reference ??
-          prevData.practitionerReference,
+          prevData.practitionerReference ??
+          "",
         practitionerDisplay:
           predefinedVisitData?.practitioner?.display ??
-          prevData.practitionerDisplay,
-        status: predefinedVisitData?.status ?? prevData.status,
-        periodStart: predefinedVisitData?.periodStart ?? prevData.periodStart,
-        periodEnd: predefinedVisitData?.periodEnd ?? prevData.periodStart,
-        location: predefinedVisitData?.location ?? prevData.location,
-        // reasonCodes: predefinedVisitData?.reasonCodes ?? "",
-        reasonCodes: "",
+          prevData.practitionerDisplay ??
+          "",
+        status: predefinedVisitData?.status ?? prevData.status ?? "planned",
+        periodStart:
+          predefinedVisitData?.periodStart ?? prevData.periodStart ?? "",
+        periodEnd: predefinedVisitData?.periodEnd ?? prevData.periodStart ?? "",
+        location: predefinedVisitData?.location ?? prevData.location ?? "",
+        reasonCodes: predefinedVisitData?.reasonCodes?.join(", ") ?? "",
       }));
     }
   }, [predefinedVisitData]);
@@ -118,7 +130,6 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
     setSubmitMessage("");
 
     try {
-      // Преобразуем reasonCodes в массив
       const reasonCodesArray = formData.reasonCodes
         ? formData.reasonCodes
             .split(",")
@@ -142,10 +153,16 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
         reasonCodes: reasonCodesArray,
       };
 
-      const registerResult = await api.registerVisit(visitData);
+      let registerResult: RegisterVisitResult;
+      if (isEditing) {
+        registerResult = await api.changeVisit(visitData);
+      } else {
+        registerResult = await api.registerVisit(visitData);
+      }
 
       if (registerResult.ok) {
         resetRegisterVisitForm();
+        navigate(`/registerVisit?patientId=${formData.patientReference}`);
       }
 
       setSubmitMessage(registerResult.message);
@@ -335,7 +352,11 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
-            {isSubmitting ? "Отправка..." : "Зарегистрировать посещение"}
+            {isSubmitting
+              ? "Отправка..."
+              : isEditing
+                ? "Редактировать посещение"
+                : "Зарегистрировать посещение"}
           </button>
 
           {submitMessage && (

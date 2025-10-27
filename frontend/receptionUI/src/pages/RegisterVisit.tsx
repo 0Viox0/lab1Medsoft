@@ -6,6 +6,7 @@ import { RegisterVisitForm } from "@/components/widgets/RegisterVisitForm";
 import { useApi } from "@/shared/hooks/useApi";
 import type { EncounterResponseDto, PatientWithId } from "@/shared/types";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 
 export const RegisterVisit = () => {
   const [patients, setPatients] = useState<PatientWithId[]>([]);
@@ -15,6 +16,8 @@ export const RegisterVisit = () => {
   const [patientEncounters, setPatientEncounters] = useState<
     EncounterResponseDto[]
   >([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const patientId = searchParams.get("patientId");
 
   const api = useApi();
 
@@ -26,10 +29,25 @@ export const RegisterVisit = () => {
     };
 
     fetchAllPatients();
+    window.scrollTo(0, 0);
   }, []);
+
+  useEffect(() => {
+    if (patients && patientId) {
+      const patient = patients.find((patient) => patient.id === patientId);
+
+      if (patient) {
+        setSelectedPatient(patient);
+      }
+    }
+  }, [patients, patientId]);
 
   const handlePatientSelect = (patient: PatientWithId) => {
     setSelectedPatient(patient);
+    setSearchParams((prevState) => ({
+      ...prevState,
+      patientId: patient.id,
+    }));
   };
 
   useEffect(() => {
@@ -51,6 +69,7 @@ export const RegisterVisit = () => {
     <>
       <TabName>Регистрация посещения пациента</TabName>
       <PatientSelect
+        selectedPatientid={selectedPatient?.id ?? ""}
         patients={patients}
         onPatientSelect={handlePatientSelect}
       />

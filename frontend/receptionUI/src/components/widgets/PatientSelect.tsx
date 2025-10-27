@@ -11,12 +11,14 @@ import {
 } from "../ui/select";
 
 export type PatientSelectProps = {
+  selectedPatientid: string;
   patients: PatientWithId[];
   onPatientSelect: (patient: PatientWithId) => void;
   placeholder?: string;
 };
 
 export const PatientSelect: FC<PatientSelectProps> = ({
+  selectedPatientid,
   patients,
   onPatientSelect,
   placeholder = "Выберите пациента",
@@ -31,7 +33,7 @@ export const PatientSelect: FC<PatientSelectProps> = ({
   };
 
   return (
-    <Select onValueChange={handleValueChange}>
+    <Select onValueChange={handleValueChange} value={selectedPatientid}>
       <SelectTrigger className="w-[220px] mt-7 hover:cursor-pointer">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

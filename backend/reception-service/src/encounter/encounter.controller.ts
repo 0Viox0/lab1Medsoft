@@ -8,6 +8,7 @@ import {
   HttpStatus,
   ValidationPipe,
   Get,
+  Patch,
 } from "@nestjs/common";
 import { CreateEncounterDto } from "./dto/createEncounter.dto";
 import { FhirEncounterService } from "./encounter.service";
@@ -23,6 +24,21 @@ export class EncounterController {
   ) {
     const result =
       await this.fhirEncounterService.createEncounter(createEncounterDto);
+
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: "Encounter successfully created",
+      data: result,
+    };
+  }
+
+  @Patch()
+  async modifyEncounter(
+    @Body(new ValidationPipe({ transform: true }))
+    createEncounterDto: CreateEncounterDto,
+  ) {
+    const result =
+      await this.fhirEncounterService.editEncounter(createEncounterDto);
 
     return {
       statusCode: HttpStatus.CREATED,

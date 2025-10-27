@@ -39,6 +39,33 @@ export class FhirEncounterService {
     }
   }
 
+  public async editEncounter(
+    createEncounterDto: CreateEncounterDto,
+  ): Promise<any> {
+    try {
+      const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
+
+      this.logger.log("Creating FHIR Encounter...", fhirEncounter);
+
+      const primaryResponse = await this.sendPatchToFhirServer(
+        fhirEncounter,
+        this.primaryFhirServer,
+      );
+
+      this.logger.log(
+        "Encounter successfully created and sent to external service",
+      );
+
+      return primaryResponse.data;
+    } catch (error) {
+      this.logger.error("Error editing encounter:", error);
+      throw new HttpException(
+        `Failed to editing encounter: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   public async getEncounters() {
     const response = await this.requestEncountersFromHospital();
 
@@ -159,9 +186,6 @@ export class FhirEncounterService {
     return encounter;
   }
 
-  /**
-   * Отправляет данные в FHIR сервер
-   */
   private async sendToFhirServer(
     fhirEncounter: any,
     serverUrl: string,
@@ -180,7 +204,42 @@ export class FhirEncounterService {
         },
       );
 
-      if (result.status >= 300 || result.status <= 200) {
+      if (result.status >= 300 || result.status < 200) {
+        throw new HttpException(
+          `Failed to create encounter: ${result.statusText}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(
+        `Error sending to FHIR server ${serverUrl}:`,
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
+
+  private async sendPatchToFhirServer(
+    fhirEncounter: any,
+    serverUrl: string,
+  ): Promise<AxiosResponse> {
+    try {
+      const httpsAgent = this.httpsClientService.getHttpsAgent();
+
+      const result = await axios.patch(
+        `${serverUrl}/encounters`,
+        fhirEncounter,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          httpsAgent: httpsAgent,
+        },
+      );
+
+      if (result.status >= 300 || result.status < 200) {
         throw new HttpException(
           `Failed to create encounter: ${result.statusText}`,
           HttpStatus.INTERNAL_SERVER_ERROR,

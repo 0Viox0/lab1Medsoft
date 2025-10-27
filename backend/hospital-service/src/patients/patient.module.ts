@@ -4,9 +4,14 @@ import { PatientsService } from "./patients.service";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Patient } from "../entities/patient.entity";
+import { FhirEncounterModule } from "../encounter/encounter.module";
 
 @Module({
-  imports: [EventEmitterModule, TypeOrmModule.forFeature([Patient])],
+  imports: [
+    EventEmitterModule,
+    TypeOrmModule.forFeature([Patient]),
+    FhirEncounterModule,
+  ],
   controllers: [],
   providers: [PatientGateway, PatientsService],
   exports: [PatientsService],

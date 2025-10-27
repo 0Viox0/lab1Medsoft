@@ -9,5 +9,6 @@ import { TypeOrmModule } from "@nestjs/typeorm";
   imports: [HttpsClientModule, TypeOrmModule.forFeature([EncounterEntity])],
   controllers: [EncounterReceiverController],
   providers: [EncounterService],
+  exports: [EncounterService],
 })
 export class FhirEncounterModule {}
