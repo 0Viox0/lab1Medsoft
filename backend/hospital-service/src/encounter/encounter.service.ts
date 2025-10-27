@@ -212,15 +212,6 @@ export class EncounterService {
     return this.encounterRepository.findOne({ where: { id } });
   }
 
-  // async getEncountersByPatient(
-  //   patientReference: string,
-  // ): Promise<EncounterEntity[]> {
-  //   return this.encounterRepository.find({
-  //     where: { patientReference },
-  //     order: { periodStart: "DESC" },
-  //   });
-  // }
-
   async getEncountersByStatus(status: string): Promise<EncounterEntity[]> {
     return this.encounterRepository.find({
       where: { status },

@@ -1,10 +1,7 @@
 import {
   Controller,
   Post,
-  // Get,
   Body,
-  // Param,
-  // Query,
   HttpStatus,
   ValidationPipe,
   Get,
@@ -47,21 +44,8 @@ export class EncounterController {
     };
   }
 
-  // @Get(":id")
-  // async getEncounter(@Param("id") id: string) {
-  //   const encounter = await this.fhirEncounterService.getEncounter(id);
-  //
-  //   return {
-  //     statusCode: HttpStatus.OK,
-  //     data: encounter,
-  //   };
-  // }
-
   @Get()
   async getEncountersByPatient() {
-    // const encounters =
-    //   await this.fhirEncounterService.findEncountersByPatient(patientId);
-    // this.fhirEncounterService.ge;
     return this.fhirEncounterService.getEncounters();
   }
 }

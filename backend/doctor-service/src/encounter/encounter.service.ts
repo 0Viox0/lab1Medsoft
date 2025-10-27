@@ -12,30 +12,6 @@ export class EncounterService {
 
   constructor(private readonly httpsClientService: HttpsClientService) {}
 
-  // async processAndSaveEncounter(
-  //   encounterData: ReceiveEncounterDto,
-  // ): Promise<EncounterEntity> {
-  //   try {
-  //     this.logger.log("Processing FHIR Encounter data...");
-  //
-  //     // Extract data from FHIR format
-  //     const encounterEntity = this.mapFhirToEntity(encounterData);
-  //
-  //     // Save to database
-  //     const savedEncounter =
-  //       await this.encounterRepository.save(encounterEntity);
-  //
-  //     this.logger.log(
-  //       `Encounter successfully saved with ID: ${savedEncounter.id}`,
-  //     );
-  //
-  //     return savedEncounter;
-  //   } catch (error) {
-  //     this.logger.error("Error processing encounter:", error);
-  //     throw error;
-  //   }
-  // }
-
   async getAllEncounters(): Promise<EncounterResponseDto[]> {
     const response = await this.requestVisitsFromHospital(this.hospitalUrl);
 
@@ -78,34 +54,12 @@ export class EncounterService {
     return entity;
   }
 
-  // async getEncounterById(id: number): Promise<EncounterEntity> {
-  //   return this.encounterRepository.findOne({ where: { id } });
-  // }
-
-  // async getEncountersByPatient(
-  //   patientReference: string,
-  // ): Promise<EncounterEntity[]> {
-  //   return this.encounterRepository.find({
-  //     where: { patientReference },
-  //     order: { periodStart: "DESC" },
-  //   });
-  // }
-
-  // async getEncountersByStatus(status: string): Promise<EncounterEntity[]> {
-  //   return this.encounterRepository.find({
-  //     where: { status },
-  //     order: { periodStart: "DESC" },
-  //   });
-  // }
-
   private mapHospitalToResponseDto(hospitalData: any): EncounterResponseDto {
-    // Извлекаем reason codes из FHIR формата
     const reasonCodes =
       hospitalData.reasonCode
         ?.map((reason: any) => reason.coding?.[0]?.code)
         .filter(Boolean) || [];
 
-    // Извлекаем location
     const location =
       hospitalData.location?.[0]?.location?.display ||
       hospitalData.location?.[0]?.location?.reference?.replace("Location/", "");

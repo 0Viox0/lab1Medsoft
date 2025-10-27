@@ -79,13 +79,11 @@ export class FhirEncounterService {
   }
 
   private mapHospitalToResponseDto(hospitalData: any): EncounterResponseDto {
-    // Извлекаем reason codes из FHIR формата
     const reasonCodes =
       hospitalData.reasonCode
         ?.map((reason: any) => reason.coding?.[0]?.code)
         .filter(Boolean) || [];
 
-    // Извлекаем location
     const location =
       hospitalData.location?.[0]?.location?.display ||
       hospitalData.location?.[0]?.location?.reference?.replace("Location/", "");
@@ -128,9 +126,6 @@ export class FhirEncounterService {
     return response.data;
   }
 
-  /**
-   * Преобразует DTO в FHIR Encounter ресурс
-   */
   private mapToFhirEncounter(
     dto: Partial<CreateEncounterDto & { id: string }>,
   ): any {
@@ -259,9 +254,6 @@ export class FhirEncounterService {
     }
   }
 
-  /**
-   * Получает отображаемое название для кода причины
-   */
   private getReasonDisplay(code: string): string {
     const reasonMap = {
       "185349003": "Follow-up visit",
@@ -273,61 +265,4 @@ export class FhirEncounterService {
 
     return reasonMap[code] || "Medical encounter";
   }
-
-  // /**
-  //  * Получает запись о посещении по ID
-  //  */
-  // async getEncounter(encounterId: string): Promise<any> {
-  //   try {
-  //     const httpsAgent = this.httpsClientService.getHttpsAgent();
-  //
-  //     const response = await axios.get(
-  //       `${this.primaryFhirServer}/Encounter/${encounterId}`,
-  //       {
-  //         headers: {
-  //           "Content-Type": "application/fhir+json",
-  //           httpsAgent,
-  //         },
-  //       },
-  //     );
-  //
-  //     return response.data;
-  //   } catch (error) {
-  //     this.logger.error(`Error getting encounter ${encounterId}:`, error);
-  //     throw new HttpException(
-  //       `Encounter not found: ${error.message}`,
-  //       HttpStatus.NOT_FOUND,
-  //     );
-  //   }
-  // }
-
-  // /**
-  //  * Ищет посещения по пациенту
-  //  */
-  // async findEncountersByPatient(patientId: string): Promise<any> {
-  //   try {
-  //     const httpsAgent = this.httpsClientService.getHttpsAgent();
-  //
-  //     const response = await axios.get(
-  //       `${this.primaryFhirServer}/Encounter?patient=${patientId}&_sort=-date`,
-  //       {
-  //         headers: {
-  //           "Content-Type": "application/fhir+json",
-  //           httpsAgent,
-  //         },
-  //       },
-  //     );
-  //
-  //     return response.data;
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Error finding encounters for patient ${patientId}:`,
-  //       error,
-  //     );
-  //     throw new HttpException(
-  //       `Error searching encounters: ${error.message}`,
-  //       HttpStatus.INTERNAL_SERVER_ERROR,
-  //     );
-  //   }
-  // }
 }
