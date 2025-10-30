@@ -1,14 +1,24 @@
-import {Controller, Post, HttpStatus, Logger, Patch, Body, ValidationPipe} from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  HttpStatus,
+  Logger,
+  Patch,
+  Body,
+  ValidationPipe,
+} from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import {CreateEncounterDto} from "./dto/createEncounter.dto";
-import {EncounterService} from "./encounter.service";
+import { CreateEncounterDto } from "./dto/createEncounter.dto";
+import { EncounterService } from "./encounter.service";
 
 @Controller("encounters")
 export class EncounterReceiverController {
   private readonly logger = new Logger(EncounterReceiverController.name);
-  private readonly encounterService: EncounterService;
 
-  constructor(private eventEmitter: EventEmitter2) {}
+  constructor(
+    private eventEmitter: EventEmitter2,
+    private encounterService: EncounterService,
+  ) {}
 
   @Post()
   async receiveEncounter() {
@@ -23,15 +33,16 @@ export class EncounterReceiverController {
 
   @Patch()
   async modifyEncounter(
-      @Body(new ValidationPipe({ transform: true }))
-      createEncounterDto: CreateEncounterDto & { id: string },
+    @Body(new ValidationPipe({ transform: true }))
+    createEncounterDto: CreateEncounterDto & { id: string },
   ) {
-      const result = await this.encounterService.editEncounter(createEncounterDto);
+    const result =
+      await this.encounterService.editEncounter(createEncounterDto);
 
-      return {
-          statusCode: HttpStatus.CREATED,
-          message: "Encounter successfully created",
-          data: result,
-      };
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: "Encounter successfully created",
+      data: result,
+    };
   }
 }

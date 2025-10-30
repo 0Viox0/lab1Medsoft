@@ -167,7 +167,7 @@ export const RegisterVisitForm: FC<RegisterVisitProps> = ({
 
       if (registerResult.ok) {
         resetRegisterVisitForm();
-        navigate(`/registerVisit?patientId=${formData.patientReference}`);
+        navigate("/visits");
       }
 
       setSubmitMessage(registerResult.message);

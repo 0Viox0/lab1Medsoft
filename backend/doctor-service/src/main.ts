@@ -23,6 +23,10 @@ async function bootstrap() {
 
   app.use(bodyParser.json());
 
+  app.enableCors({
+    origin: true,
+  });
+
   app.useStaticAssets(join(__dirname, "..", "public"));
 
   const port = process.env.PORT || 3002;
