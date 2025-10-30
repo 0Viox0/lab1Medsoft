@@ -4,6 +4,7 @@ import axios, { AxiosResponse } from "axios";
 import { EncounterResponseDto } from "./dto/encounterResponse.dto";
 import { ReceiveEncounterDto } from "./dto/receiveEncounter.dto";
 import { HttpsClientService } from "../httpsClient/httpsClient.service";
+import {CreateEncounterDto} from "./dto/createEncounter.dto";
 
 @Injectable()
 export class EncounterService {
@@ -85,7 +86,139 @@ export class EncounterService {
     };
   }
 
-  public async requestVisitsFromHospital(
+    public async editEncounter(
+        createEncounterDto: CreateEncounterDto & { id: string },
+    ): Promise<any> {
+        try {
+            const fhirEncounter = this.mapToFhirEncounter(createEncounterDto);
+
+            this.logger.log("Editing FHIR Encounter...", fhirEncounter);
+
+            const primaryResponse = await this.sendPatchToFhirServer(
+                fhirEncounter,
+                this.hospitalUrl,
+            );
+
+            this.logger.log(
+                "Encounter successfully edited and sent to external service",
+            );
+
+            return primaryResponse.data;
+        } catch (error) {
+            this.logger.error("Error editing encounter:", error);
+            throw new HttpException(
+                `Failed to editing encounter: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    private async sendPatchToFhirServer(
+        fhirEncounter: any,
+        serverUrl: string,
+    ): Promise<AxiosResponse> {
+        try {
+            const httpsAgent = this.httpsClientService.getHttpsAgent();
+
+            console.log("WHAT WE ARE SENDING:");
+
+            const result = await axios.patch(
+                `${serverUrl}/encounters`,
+                fhirEncounter,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    httpsAgent: httpsAgent,
+                },
+            );
+
+            if (result.status >= 300 || result.status < 200) {
+                throw new HttpException(
+                    `Failed to create encounter: ${result.statusText}`,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                );
+            }
+
+            return result.data;
+        } catch (error) {
+            this.logger.error(
+                `Error sending to FHIR server ${serverUrl}:`,
+                error.response?.data || error.message,
+            );
+            throw error;
+        }
+    }
+
+    private mapToFhirEncounter(
+        dto: Partial<CreateEncounterDto & { id: string }>,
+    ): any {
+        const encounter = {
+            resourceType: "Encounter",
+            id: dto.id,
+            status: dto.status,
+            class: {
+                system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                code: "AMB",
+                display: "ambulatory",
+            },
+            subject: {
+                reference: dto.patient.reference,
+                display: dto.patient.display,
+            },
+            participant: [
+                {
+                    individual: {
+                        reference: dto.practitioner.reference,
+                        display: dto.practitioner.display,
+                    },
+                },
+            ],
+            period: {
+                start: dto.periodStart,
+                end: dto.periodEnd || new Date().toISOString(),
+            },
+        };
+
+        if (dto.location) {
+            encounter["location"] = [
+                {
+                    location: {
+                        reference: `Location/${dto.location}`,
+                        display: dto.location,
+                    },
+                },
+            ];
+        }
+
+        if (dto.reasonCodes && dto.reasonCodes.length > 0) {
+            encounter["reasonCode"] = dto.reasonCodes.map((code) => ({
+                coding: [
+                    {
+                        system: "http://snomed.info/sct",
+                        code: code,
+                        display: this.getReasonDisplay(code),
+                    },
+                ],
+            }));
+        }
+
+        return encounter;
+    }
+
+    private getReasonDisplay(code: string): string {
+        const reasonMap = {
+            "185349003": "Follow-up visit",
+            "270427003": "Patient-initiated encounter",
+            "308335008": "Patient visit",
+            "390906007": "Follow-up encounter",
+            "185317003": "Visit for check-up",
+        };
+
+        return reasonMap[code] || "Medical encounter";
+    }
+
+    public async requestVisitsFromHospital(
     serverUrl: string,
   ): Promise<AxiosResponse> {
     try {
