@@ -1,12 +1,14 @@
+import type { VisitData } from "@/components/widgets/RegisterVisitForm";
 import type { Patient, PatientWithId } from "@/shared/types";
 
-const BASE_URL = "https://localhost:3000";
+const BASE_URL = "https://localhost:3002";
 const PATH = "/patients";
 
 const url = BASE_URL + PATH;
+const registerVisitUrl = BASE_URL + "/encounters";
 
 export const createApi = () => {
-  return { createPatient, deletePatientById, getAllPatients };
+  return { createPatient, deletePatientById, getAllPatients, changeVisit };
 };
 
 const createPatient = async (patient: Patient) => {
@@ -56,4 +58,30 @@ const getAllPatients = async (): Promise<PatientWithId[] | []> => {
   }
 
   return [];
+};
+
+export type RegisterVisitResult = {
+  ok: boolean;
+  message: string;
+};
+
+const changeVisit = async (
+  visitData: VisitData & { id: string },
+): Promise<RegisterVisitResult> => {
+  const response = await fetch(registerVisitUrl, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(visitData),
+  });
+
+  if (response.ok) {
+    return { ok: true, message: "Посещение успешно заменено!" };
+  }
+
+  const errorData = await response.json();
+  const message = `Ошибка: ${errorData.message || "Неизвестная ошибка"}`;
+
+  return { ok: false, message };
 };
