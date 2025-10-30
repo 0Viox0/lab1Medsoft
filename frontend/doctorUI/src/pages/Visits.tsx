@@ -2,7 +2,6 @@ import { TabName } from "@/components/ui/TabName";
 import { EncounterTable } from "@/components/widgets/EncounterTable";
 import { FilterForm, type FilterState } from "@/components/widgets/FilterForm";
 import { useSocket } from "@/shared/hooks/useSocket";
-import { id } from "date-fns/locale";
 import { useEffect, useState } from "react";
 
 export const Visits = () => {

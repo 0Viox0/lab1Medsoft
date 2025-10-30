@@ -1,3 +1,11 @@
+export type Patient = {
+  name: string;
+  lastName: string;
+  dateOfBirth: Date;
+};
+
+export type PatientWithId = Patient & { id: string };
+
 export type EncounterResponseDto = {
   id: string;
   status: string;

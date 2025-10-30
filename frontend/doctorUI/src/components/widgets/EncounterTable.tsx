@@ -10,6 +10,7 @@ import {
 import type { FC } from "react";
 import type { EncounterResponseDto } from "@/shared/types";
 import type { FilterState } from "./FilterForm";
+import { ChangeVisitButton } from "./ChangeVisitButton";
 
 export type EncounterTableProps = {
   tableCaption?: string;
@@ -93,6 +94,7 @@ export const EncounterTable: FC<EncounterTableProps> = ({
           <TableHead className="w-[100px]">Время</TableHead>
           <TableHead className="w-[100px]">Локация</TableHead>
           <TableHead>Причины</TableHead>
+          <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -172,6 +174,9 @@ export const EncounterTable: FC<EncounterTableProps> = ({
                   </span>
                 )}
               </div>
+            </TableCell>
+            <TableCell>
+              <ChangeVisitButton forEncounter={encounter} />
             </TableCell>
           </TableRow>
         ))}

@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { Sidebar } from "./modules/sidebar/Sidebar";
 import { Redirect } from "./pages/Redirect";
 import { Visits } from "./pages/Visits";
+import { EditVisit } from "./pages/EditVisit";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route index element={<Redirect to="/visits" />} />
           <Route element={<Sidebar appName="DoctorUI" />} path="/">
             <Route path="visits" element={<Visits />} />
+            <Route path="editVisit" element={<EditVisit />} />
           </Route>
         </Routes>
       </ThemeProvider>
